@@ -1,7 +1,7 @@
 services:
   backend:
     build: .
-    container_name: booking-backend
+    container_name: backend
     restart: unless-stopped
     ports:
       - "5948:5000"   # Redirige le port 5948 de l'hôte vers 5000 du conteneur
