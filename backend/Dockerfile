@@ -20,4 +20,4 @@ RUN npx prisma generate
 EXPOSE 5000
 
 # Commande de démarrage (avec migrations automatiques)
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+CMD ["sh", "-c", "npm start"]
