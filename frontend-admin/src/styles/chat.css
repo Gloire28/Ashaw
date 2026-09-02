@@ -1,0 +1,239 @@
+.conv-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  height: calc(100vh - 180px);
+  min-height: 480px;
+  background: var(--surface);
+}
+
+.conv-list {
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+
+.conv-list__filters {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.conv-list__item {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.conv-list__item.active {
+  background: var(--paper);
+}
+
+.conv-list__item:hover {
+  background: var(--paper);
+}
+
+.conv-list__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--surface-sunken);
+  flex-shrink: 0;
+}
+
+.conv-list__meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.conv-list__top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.conv-list__name {
+  font-size: 0.9rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-list__product {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin-bottom: 2px;
+}
+
+.conv-list__last {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.conv-detail__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.conv-detail__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.conv-detail__header img {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.conv-detail__title {
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.conv-detail__subtitle {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+
+.conv-detail__header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.conv-detail__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.conv-detail__footer {
+  border-top: 1px solid var(--line);
+  padding: var(--space-2);
+}
+
+/* --- Bulles (mêmes proportions que côté client, ADMIN = à droite) --- */
+.bubble-row {
+  display: flex;
+}
+
+.bubble-row.self {
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-width: 72%;
+  padding: 0.55em 0.85em;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.bubble-row:not(.self) .bubble {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 2px;
+}
+
+.bubble-row.self .bubble {
+  background: var(--ink);
+  color: var(--paper);
+  border-bottom-right-radius: 2px;
+}
+
+.bubble--system {
+  margin: var(--space-1) auto;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+  max-width: 90%;
+}
+
+.bubble img,
+.bubble video {
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.3em;
+  max-height: 200px;
+}
+
+.bubble__time {
+  display: block;
+  font-size: 0.68rem;
+  margin-top: 0.3em;
+  opacity: 0.65;
+}
+
+.chat-input {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.chat-input textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: 0.5em 0.75em;
+  max-height: 90px;
+  font-size: 0.88rem;
+}
+
+.chat-input__attach {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+@media (max-width: 860px) {
+  .conv-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .conv-list {
+    max-height: 240px;
+  }
+}

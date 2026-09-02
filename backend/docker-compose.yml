@@ -1,0 +1,51 @@
+services:
+  backend:
+    build: .
+    container_name: booking-backend
+    restart: unless-stopped
+    ports:
+      - "5948:5000"   # Redirige le port 5948 de l'hôte vers 5000 du conteneur
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      # Base de données Supabase
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      # Backblaze B2
+      - BACKBLAZE_KEY_ID=${BACKBLAZE_KEY_ID}
+      - BACKBLAZE_APPLICATION_KEY=${BACKBLAZE_APPLICATION_KEY}
+      - BACKBLAZE_BUCKET_NAME=${BACKBLAZE_BUCKET_NAME}
+      - BACKBLAZE_ENDPOINT=${BACKBLAZE_ENDPOINT}
+      - BACKBLAZE_REGION=${BACKBLAZE_REGION}
+      # Sécurité
+      - JWT_SECRET=${JWT_SECRET}
+      - COOKIE_SECRET=${COOKIE_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      # Admin
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # Métiers
+      - SESSION_DURATION_HOURS=${SESSION_DURATION_HOURS}
+      - MAX_ACTIVE_CONVERSATIONS=${MAX_ACTIVE_CONVERSATIONS}
+      - TRASH_RETENTION_DAYS=${TRASH_RETENTION_DAYS}
+      # (supprime CLOUDINARY si tu ne l'utilises plus)
+    networks:
+      - booking-net
+
+  # Optionnel : Redis pour les sessions ou cache (si tu en as besoin)
+  redis:
+    image: redis:7-alpine
+    container_name: booking-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - booking-net
+    # Tu peux commenter ce service si tu n'utilises pas Redis
+
+networks:
+  booking-net:
+    driver: bridge
+
+volumes:
+  redis-data:

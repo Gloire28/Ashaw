@@ -1,0 +1,240 @@
+.container {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+/* --- Navbar --- */
+.nav {
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.nav__brand {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.nav__links {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.nav__links a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.nav__links a:hover,
+.nav__links a.active {
+  color: var(--ink);
+}
+
+/* --- Footer --- */
+.footer {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-6);
+  padding: var(--space-5) 0;
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+
+.footer__inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* --- Boutons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.65em 1.3em;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-ink);
+}
+
+.btn--accent {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn--accent:hover:not(:disabled) {
+  background: var(--accent-ink);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.btn--sm {
+  padding: 0.4em 0.9em;
+  font-size: 0.85rem;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+/* --- Champs de formulaire --- */
+.field {
+  margin-bottom: var(--space-3);
+  text-align: left;
+}
+
+.field label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-bottom: var(--space-1);
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.6em 0.75em;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: var(--accent-ink);
+}
+
+.field__error {
+  color: var(--danger);
+  font-size: 0.82rem;
+  margin-top: var(--space-1);
+}
+
+.field__hint {
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+  margin-top: var(--space-1);
+}
+
+/* --- Badges de statut --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.25em 0.7em;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge--confirm {
+  background: var(--confirm-soft);
+  color: var(--confirm);
+}
+
+.badge--pending {
+  background: var(--pending-soft);
+  color: var(--pending);
+}
+
+.badge--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.badge--neutral {
+  background: var(--surface-sunken);
+  color: var(--ink-soft);
+}
+
+/* --- Loader --- */
+.loader {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page-state {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.banner {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--ink);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-3);
+  font-size: 0.92rem;
+}

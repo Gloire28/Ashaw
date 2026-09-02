@@ -1,0 +1,47 @@
+:root {
+  /* Couleurs */
+  --paper: #efeee6;
+  --surface: #ffffff;
+  --surface-sunken: #e8e6dc;
+  --ink: #1b2e2b;
+  --ink-soft: #4c5a56;
+  --ink-faint: #7c8884;
+  --line: #dad5c8;
+  --line-strong: #c3bca9;
+
+  --accent: #b5792e;
+  --accent-ink: #7a501c;
+  --accent-soft: #f2e4cd;
+
+  --confirm: #2f6f62;
+  --confirm-soft: #e1ede9;
+  --pending: #b8842c;
+  --pending-soft: #f6ecd9;
+  --danger: #a5372f;
+  --danger-soft: #f4e1df;
+
+  /* Typo */
+  --font-display: 'Libre Caslon Text', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Rythme */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+  --space-6: 64px;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+
+  --shadow-overlay: 0 12px 32px rgba(27, 46, 43, 0.18);
+  --max-line: 68ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+  }
+}
