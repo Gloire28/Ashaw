@@ -1,8 +1,8 @@
 # --- Booking Dockerfile ---
 FROM node:20-alpine
 
-# bcrypt nécessite une compilation native (python3, make, g++)
-RUN apk add --no-cache python3 make g++
+# Ajout de openssl et libc6-compat pour Prisma, en plus des outils pour bcrypt
+RUN apk add --no-cache python3 make g++ openssl libc6-compat
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN npm ci --omit=dev
 # Copier le reste du code
 COPY . .
 
-# Générer le client Prisma (optionnel mais recommandé)
+# Générer le client Prisma
 RUN npx prisma generate
 
 EXPOSE 5000
