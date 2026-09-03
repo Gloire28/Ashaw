@@ -1,6 +1,6 @@
 import prisma from '../config/database.js';
 import { touchConversation } from '../services/conversationService.js';
-import { uploadMedia } from '../services/cloudinaryService.js';
+import { uploadMedia } from '../services/storage.js';
 import { getIO } from '../config/socket.js';
 
 const resolveSender = (req) => (req.admin ? 'ADMIN' : 'CLIENT');
