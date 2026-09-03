@@ -6,7 +6,13 @@ import BookingFormModal from '../bookings/BookingFormModal.jsx';
 import Loader from '../common/Loader.jsx';
 import { conversationStatusLabels } from '../../utils/formatTime.js';
 
-const ConversationDetail = ({ conversationId, socketRef, onChanged }) => {
+const ConversationDetail = ({
+  conversationId,
+  socketRef,
+  onChanged,
+  sessionGroups = {},
+  onSelectConversation,
+}) => {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -114,6 +120,31 @@ const ConversationDetail = ({ conversationId, socketRef, onChanged }) => {
           </button>
         </div>
       </div>
+
+      {(() => {
+        const siblings = (sessionGroups[conversation.sessionId] || []).filter(
+          (c) => c.id !== conversationId
+        );
+        if (siblings.length === 0) return null;
+        return (
+          <div className="banner" style={{ borderLeftColor: 'var(--ink-faint)', background: 'var(--surface-sunken)' }}>
+            Même session navigateur — {siblings.length} autre{siblings.length > 1 ? 's' : ''}{' '}
+            discussion{siblings.length > 1 ? 's' : ''} :{' '}
+            {siblings.map((s, i) => (
+              <span key={s.id}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  style={{ padding: '0.1em 0.6em', marginLeft: '4px' }}
+                  onClick={() => onSelectConversation?.(s.id)}
+                >
+                  {s.product.name}
+                </button>
+                {i < siblings.length - 1 ? ' ' : ''}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
 
       <div className="conv-detail__messages" ref={scrollRef}>
         {messages.map((message) => (

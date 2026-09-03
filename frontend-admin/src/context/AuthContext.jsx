@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import api from '../services/api.js';
+import api, { setAdminToken } from '../services/api.js';
 
 const AuthContext = createContext(null);
 
@@ -11,17 +11,23 @@ export const AuthProvider = ({ children }) => {
     api
       .get('/api/admin/me')
       .then(({ data }) => setAdmin(data))
-      .catch(() => setAdmin(null))
+      .catch(() => {
+        setAdmin(null);
+        setAdminToken(null); // token périmé/invalide, on nettoie
+      })
       .finally(() => setChecking(false));
   }, []);
 
   const login = async (username, password) => {
     const { data } = await api.post('/api/admin/login', { username, password });
-    setAdmin(data);
+    const { token, ...adminInfo } = data;
+    setAdminToken(token);
+    setAdmin(adminInfo);
   };
 
   const logout = async () => {
     await api.post('/api/admin/logout');
+    setAdminToken(null);
     setAdmin(null);
   };
 

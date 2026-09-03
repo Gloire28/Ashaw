@@ -1,6 +1,6 @@
 import prisma from '../config/database.js';
 import { touchConversation } from '../services/conversationService.js';
-import { uploadMedia } from '../services/storage.js';
+import { uploadMedia } from '../services/cloudinaryService.js';
 import { getIO } from '../config/socket.js';
 
 const resolveSender = (req) => (req.admin ? 'ADMIN' : 'CLIENT');
@@ -30,7 +30,7 @@ export const sendMessage = async (req, res, next) => {
       res.status(404);
       throw new Error('Discussion introuvable');
     }
-    if (!req.admin && conversation.sessionId !== req.cookies?.sessionId) {
+    if (!req.admin && conversation.sessionId !== req.headers['x-session-id']) {
       res.status(403);
       throw new Error('Accès refusé');
     }
@@ -68,7 +68,7 @@ export const requestMorePhotos = async (req, res, next) => {
   try {
     const { conversationId } = req.params;
     const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
-    if (!conversation || conversation.sessionId !== req.cookies?.sessionId) {
+    if (!conversation || conversation.sessionId !== req.headers['x-session-id']) {
       res.status(403);
       throw new Error('Accès refusé');
     }

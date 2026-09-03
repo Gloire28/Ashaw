@@ -13,7 +13,14 @@ const statusBadgeClass = {
   ARCHIVED: 'badge--neutral',
 };
 
-const ConversationsList = ({ conversations, filter, onFilterChange, selectedId, onSelect }) => {
+const ConversationsList = ({
+  conversations,
+  filter,
+  onFilterChange,
+  selectedId,
+  onSelect,
+  sessionGroups = {},
+}) => {
   const filtered =
     filter === 'ALL' ? conversations : conversations.filter((c) => c.status === filter);
 
@@ -34,7 +41,9 @@ const ConversationsList = ({ conversations, filter, onFilterChange, selectedId, 
       {filtered.length === 0 ? (
         <p className="table__empty">Aucune conversation ici.</p>
       ) : (
-        filtered.map((conv) => (
+        filtered.map((conv) => {
+          const siblingCount = (sessionGroups[conv.sessionId]?.length || 1) - 1;
+          return (
           <button
             key={conv.id}
             className={`conv-list__item${conv.id === selectedId ? ' active' : ''}`}
@@ -49,6 +58,12 @@ const ConversationsList = ({ conversations, filter, onFilterChange, selectedId, 
                 <span className={`badge ${statusBadgeClass[conv.status]}`}>
                   {conversationStatusLabels[conv.status]}
                 </span>
+                {siblingCount > 0 && (
+                  <span className="badge badge--neutral" title="Même session navigateur">
+                    +{siblingCount} autre{siblingCount > 1 ? 's' : ''} discussion
+                    {siblingCount > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
               <div className="conv-list__product">{conv.product.name}</div>
               <div className="conv-list__last">
@@ -56,7 +71,8 @@ const ConversationsList = ({ conversations, filter, onFilterChange, selectedId, 
               </div>
             </div>
           </button>
-        ))
+          );
+        })
       )}
     </div>
   );

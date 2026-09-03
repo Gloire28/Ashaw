@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../services/api.js';
 import ConversationsList from '../components/conversations/ConversationsList.jsx';
 import ConversationDetail from '../components/conversations/ConversationDetail.jsx';
@@ -11,6 +11,20 @@ const ConversationsPage = () => {
   const [filter, setFilter] = useState('ALL');
   const [selectedId, setSelectedId] = useState(null);
   const socketRef = useSocket();
+
+  // Regroupe les conversations par sessionId : permet de repérer qu'un même
+  // visiteur (même session navigateur) a ouvert plusieurs discussions.
+  // Limite honnête : quelqu'un qui vide ses cookies/localStorage ou passe en
+  // navigation privée obtient un sessionId différent — ça ne détecte que les
+  // cas non délibérés, pas un contournement volontaire.
+  const sessionGroups = useMemo(() => {
+    const groups = {};
+    conversations.forEach((conv) => {
+      if (!groups[conv.sessionId]) groups[conv.sessionId] = [];
+      groups[conv.sessionId].push(conv);
+    });
+    return groups;
+  }, [conversations]);
 
   const refresh = useCallback(async () => {
     const { data } = await api.get('/api/conversations/admin/all');
@@ -48,11 +62,14 @@ const ConversationsPage = () => {
             onFilterChange={setFilter}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            sessionGroups={sessionGroups}
           />
           <ConversationDetail
             conversationId={selectedId}
             socketRef={socketRef}
             onChanged={refresh}
+            sessionGroups={sessionGroups}
+            onSelectConversation={setSelectedId}
           />
         </div>
       )}

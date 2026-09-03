@@ -12,40 +12,42 @@ export const initSocket = (httpServer) => {
     },
   });
 
-  // Deux profils peuvent se connecter : un client (cookie sessionId) ou l'admin
-  // (cookie adminToken, vérifié comme sur les routes HTTP protégées).
-  // Le sessionId accepte aussi un fallback en query string si le cookie n'est pas transmis.
   io.use((socket, next) => {
-    const cookieHeader = socket.handshake.headers.cookie || '';
-    const sessionMatch = cookieHeader.match(/sessionId=([^;]+)/);
-    const adminMatch = cookieHeader.match(/adminToken=([^;]+)/);
-    const sessionId = sessionMatch?.[1] || socket.handshake.query.sessionId;
+    // 1. Récupération du sessionId depuis la query string (envoyé par le client)
+    const sessionId = socket.handshake.query.sessionId;
 
-    if (adminMatch?.[1]) {
+    // 2. Récupération du token admin depuis l'objet auth (envoyé par le frontend admin)
+    const token = socket.handshake.auth.token;
+
+    // 3. Si un token est fourni, on tente de l'authentifier comme admin
+    if (token) {
       try {
-        jwt.verify(adminMatch[1], config.jwtSecret);
+        const decoded = jwt.verify(token, config.jwtSecret);
         socket.isAdmin = true;
+        socket.admin = decoded; // optionnel
+        // On garde aussi le sessionId si présent (utile pour l'admin)
+        if (sessionId) socket.sessionId = sessionId;
         return next();
       } catch (_error) {
-        // token admin invalide/expiré : on retente en tant que client ci-dessous
+        // Token invalide : on ne bloque pas, on tente la suite
       }
     }
 
+    // 4. Si pas de token admin valide, on tente une session client
     if (sessionId) {
       socket.sessionId = sessionId;
       return next();
     }
 
-    return next(new Error('Authentification requise'));
+    // 5. Aucune authentification trouvée → refus
+    return next(new Error('Authentification requise : sessionId ou token admin manquant'));
   });
 
   io.on('connection', (socket) => {
-    // Le client rejoint la room de sa conversation pour recevoir les messages en temps réel
     socket.on('join_conversation', (conversationId) => {
       socket.join(conversationId);
     });
 
-    // L'admin rejoint une room globale pour être notifié de toute activité
     socket.on('join_admin', () => {
       if (socket.isAdmin) {
         socket.join('admin_room');

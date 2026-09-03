@@ -2,7 +2,6 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/database.js';
 import { config } from '../config/index.js';
-import { setAdminCookie, clearCookie } from '../utils/cookieUtils.js';
 
 export const loginAdmin = async (req, res, next) => {
   try {
@@ -24,15 +23,16 @@ export const loginAdmin = async (req, res, next) => {
       expiresIn: '7d',
     });
 
-    setAdminCookie(res, token);
-    res.json({ id: admin.id, username: admin.username });
+    // Le token est renvoyé dans le corps de la réponse (plus de cookie
+    // cross-site, bloqué par défaut sur Safari/iOS) : le frontend le stocke
+    // et le renvoie lui-même en "Authorization: Bearer <token>".
+    res.json({ id: admin.id, username: admin.username, token });
   } catch (error) {
     next(error);
   }
 };
 
 export const logoutAdmin = async (req, res) => {
-  clearCookie(res, 'adminToken');
   res.status(204).send();
 };
 

@@ -1,6 +1,5 @@
 import prisma from '../config/database.js';
 import { generateUUID } from '../utils/generateUUID.js';
-import { setSessionCookie } from '../utils/cookieUtils.js';
 import { isValidAge, isNonEmptyString } from '../utils/validators.js';
 import { config } from '../config/index.js';
 import {
@@ -31,7 +30,9 @@ export const startConversation = async (req, res, next) => {
       throw new Error('Produit introuvable');
     }
 
-    let sessionId = req.cookies?.sessionId;
+    // Le sessionId est généré côté client (localStorage) et envoyé en header —
+    // plus de cookie cross-site, bloqué par défaut sur Safari/iOS.
+    let sessionId = req.headers['x-session-id'];
     if (!sessionId) {
       sessionId = generateUUID();
     }
@@ -51,8 +52,6 @@ export const startConversation = async (req, res, next) => {
       productId,
     });
 
-    setSessionCookie(res, sessionId, config.sessionDurationHours);
-
     try {
       getIO().to('admin_room').emit('new_conversation', conversation);
     } catch (_error) {
@@ -67,7 +66,7 @@ export const startConversation = async (req, res, next) => {
 
 export const getMyConversations = async (req, res, next) => {
   try {
-    const sessionId = req.cookies?.sessionId;
+    const sessionId = req.headers['x-session-id'];
     if (!sessionId) {
       return res.json([]);
     }
@@ -80,7 +79,7 @@ export const getMyConversations = async (req, res, next) => {
 
 export const getConversationById = async (req, res, next) => {
   try {
-    const sessionId = req.cookies?.sessionId;
+    const sessionId = req.headers['x-session-id'];
     const conversation = await prisma.conversation.findUnique({
       where: { id: req.params.id },
       include: { product: true, messages: { orderBy: { createdAt: 'asc' } } },
