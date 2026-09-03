@@ -12,6 +12,7 @@ const ConversationDetail = ({
   onChanged,
   sessionGroups = {},
   onSelectConversation,
+  onFilterBySession, // nouvelle prop pour filtrer par sessionId
 }) => {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -104,6 +105,9 @@ const ConversationDetail = ({
           <div className="conv-detail__subtitle">
             {conversation.product.name} — {conversationStatusLabels[conversation.status]}
           </div>
+          <div className="conv-detail__session" style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>
+            Session : {conversation.sessionId}
+          </div>
         </div>
         <div className="conv-detail__header-actions">
           {conversation.status !== 'ARCHIVED' && (
@@ -118,6 +122,15 @@ const ConversationDetail = ({
           >
             {bookingSaved ? 'Réservation créée ✓' : '📅 Créer une réservation'}
           </button>
+          {onFilterBySession && (
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={() => onFilterBySession(conversation.sessionId)}
+              title="Voir toutes les discussions de cette session"
+            >
+              🔗 Voir toutes
+            </button>
+          )}
         </div>
       </div>
 
