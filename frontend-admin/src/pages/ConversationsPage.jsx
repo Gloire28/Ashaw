@@ -10,13 +10,10 @@ const ConversationsPage = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
   const [selectedId, setSelectedId] = useState(null);
+  const [filterBySession, setFilterBySession] = useState(null); 
   const socketRef = useSocket();
 
-  // Regroupe les conversations par sessionId : permet de repérer qu'un même
-  // visiteur (même session navigateur) a ouvert plusieurs discussions.
-  // Limite honnête : quelqu'un qui vide ses cookies/localStorage ou passe en
-  // navigation privée obtient un sessionId différent — ça ne détecte que les
-  // cas non délibérés, pas un contournement volontaire.
+  // Regroupe les conversations par sessionId
   const sessionGroups = useMemo(() => {
     const groups = {};
     conversations.forEach((conv) => {
@@ -46,6 +43,12 @@ const ConversationsPage = () => {
     };
   }, [socketRef, refresh]);
 
+  // Réinitialiser le filtre de session quand on change le filtre général
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    if (newFilter === 'ALL') setFilterBySession(null);
+  };
+
   return (
     <>
       <div className="section-head">
@@ -59,10 +62,11 @@ const ConversationsPage = () => {
           <ConversationsList
             conversations={conversations}
             filter={filter}
-            onFilterChange={setFilter}
+            onFilterChange={handleFilterChange}
             selectedId={selectedId}
             onSelect={setSelectedId}
             sessionGroups={sessionGroups}
+            filterBySession={filterBySession} 
           />
           <ConversationDetail
             conversationId={selectedId}
@@ -70,6 +74,7 @@ const ConversationsPage = () => {
             onChanged={refresh}
             sessionGroups={sessionGroups}
             onSelectConversation={setSelectedId}
+            onFilterBySession={setFilterBySession} 
           />
         </div>
       )}
