@@ -8,23 +8,24 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------
+enum ProductCategory {
+  F
+  N
+}
+
 enum ConversationStatus {
-  ACTIVE
-  INACTIVE
-  ARCHIVED
+  PENDING   // en attente d'activation par l'admin
+  ACTIVE    // visible par le target
+  EXPIRED   // 24h passées (masquée pour les produits)
+  DELETED   // supprimée définitivement par l'admin
 }
 
-enum MessageSender {
-  CLIENT
+enum SenderType {
+  PRODUCT
   ADMIN
-  SYSTEM
-}
-
-enum MessageType {
-  TEXT
-  PHOTO
-  VIDEO
-  SYSTEM
 }
 
 enum BookingStatus {
@@ -34,57 +35,104 @@ enum BookingStatus {
   COMPLETED
 }
 
+// ------------------------------------------------------
+// ADMIN
+// ------------------------------------------------------
 model Admin {
   id           String   @id @default(uuid())
   username     String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
+
+  // Relation inverse : les conversations que l'admin supervise
+  managedConversations Conversation[]
 }
 
+// ------------------------------------------------------
+// PROPRIÉTAIRE DE PRODUIT (compte)
+// ------------------------------------------------------
+model ProductOwner {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  age          Int
+  quartier     String
+  createdAt    DateTime @default(now())
+
+  // Relation 1-1 avec Product (la clé étrangère est dans Product)
+  product      Product?
+}
+
+// ------------------------------------------------------
+// PRODUIT
+// ------------------------------------------------------
 model Product {
-  id               String   @id @default(uuid())
+  id               String          @id @default(uuid())
   name             String
   description      String
-  category         String
+  category         ProductCategory // F ou N (choix binaire)
   pricePerHour     Float
   mainPhotoUrl     String
-  additionalPhotos String[] @default([])
+  additionalPhotos String[]        @default([])
   videoUrl         String?
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  conversations Conversation[]
-  bookings      Booking[]
-}
+  // Propriétaire (clé étrangère vers ProductOwner)
+  ownerId          String          @unique
+  owner            ProductOwner    @relation(fields: [ownerId], references: [id])
 
-model Conversation {
-  id             String             @id @default(uuid())
-  sessionId      String
-  clientPseudo   String
-  clientAge      Int
-  status         ConversationStatus @default(ACTIVE)
-  lastActivityAt DateTime           @default(now())
-  expiresAt      DateTime
-  createdAt      DateTime           @default(now())
+  // Conversations initiées par ce produit
+  initiatedConversations Conversation[] @relation("Initiator")
+  // Conversations ciblées par ce produit
+  targetedConversations   Conversation[] @relation("Target")
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  messages Message[]
+  // Réservations liées à ce produit (relation inverse)
   bookings Booking[]
 
-  @@index([sessionId])
-  @@index([status])
+  // Pas besoin de champ "conversations" car on utilise les deux relations ci-dessus
 }
 
+// ------------------------------------------------------
+// CONVERSATION (groupe à 3 : initiateur, target, admin)
+// ------------------------------------------------------
+model Conversation {
+  id             String             @id @default(uuid())
+  status         ConversationStatus @default(PENDING)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  expiresAt      DateTime           // = createdAt + 24h (pour les produits)
+  adminVisibleUntil DateTime?       // = createdAt + 30j (pour l'admin)
+
+  // Participants
+  initiatorId   String
+  targetId      String
+  adminId       String?
+
+  initiator     Product @relation("Initiator", fields: [initiatorId], references: [id])
+  target        Product @relation("Target", fields: [targetId], references: [id])
+  admin         Admin?  @relation(fields: [adminId], references: [id])
+
+  // Messages et réservations liés
+  messages      Message[]
+  bookings      Booking[]
+
+  // Index
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// ------------------------------------------------------
+// MESSAGE
+// ------------------------------------------------------
 model Message {
-  id        String        @id @default(uuid())
-  content   String?
-  mediaUrl  String?
-  sender    MessageSender
-  type      MessageType   @default(TEXT)
-  createdAt DateTime      @default(now())
+  id             String      @id @default(uuid())
+  content        String?
+  mediaUrl       String?
+  senderType     SenderType  // PRODUCT ou ADMIN
+  senderId       String?     // productId ou adminId
+  createdAt      DateTime    @default(now())
 
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -92,9 +140,9 @@ model Message {
   @@index([conversationId])
 }
 
-// Une location/réservation : toujours créée et confirmée par l'admin,
-// le plus souvent directement depuis une conversation (conversationId renseigné),
-// mais peut aussi être créée manuellement (conversationId nul).
+// ------------------------------------------------------
+// BOOKING (réservation)
+// ------------------------------------------------------
 model Booking {
   id            String        @id @default(uuid())
   clientPseudo  String
@@ -108,12 +156,15 @@ model Booking {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
+  // Clé étrangère vers Product
+  productId     String
+  product       Product       @relation(fields: [productId], references: [id])
 
+  // Clé étrangère vers Conversation (optionnelle)
   conversationId String?
   conversation   Conversation? @relation(fields: [conversationId], references: [id])
 
+  // Index
   @@index([date])
   @@index([status])
 }

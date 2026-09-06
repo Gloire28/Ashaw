@@ -34,8 +34,10 @@ export const bookingStatusBadge = {
   COMPLETED: 'badge--neutral',
 };
 
+// MIS À JOUR : nouveaux statuts pour le nouveau système
 export const conversationStatusLabels = {
+  PENDING: 'En attente',
   ACTIVE: 'Active',
-  INACTIVE: 'Inactive',
-  ARCHIVED: 'Archivée',
+  EXPIRED: 'Expirée',
+  DELETED: 'Supprimée',
 };

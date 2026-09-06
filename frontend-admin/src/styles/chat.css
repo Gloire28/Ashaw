@@ -237,3 +237,28 @@
     max-height: 240px;
   }
 }
+/* Badges pour les nouveaux statuts */
+.badge--pending {
+  background: var(--pending-soft);
+  color: var(--pending);
+}
+.badge--neutral {
+  background: var(--surface-sunken);
+  color: var(--ink-faint);
+}
+
+/* Participants dans le détail */
+.conv-detail__participants {
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-faint);
+}
+
+/* Label de l'expéditeur dans les bulles (mode admin) */
+.bubble__sender {
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin-bottom: 4px;
+}

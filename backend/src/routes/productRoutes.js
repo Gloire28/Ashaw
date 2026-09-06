@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getProducts,
   getProductById,
+  getMyProduct,
   getAllProductsAdmin,
   createProduct,
   updateProduct,
@@ -9,6 +10,7 @@ import {
   deleteProduct,
 } from '../controllers/productController.js';
 import { protectAdmin } from '../middleware/authMiddleware.js';
+import { identifyProduct, protectProduct } from '../middleware/productAuthMiddleware.js';
 import { upload } from '../middleware/uploadMiddleware.js';
 
 const router = Router();
@@ -19,15 +21,18 @@ const productFiles = upload.fields([
   { name: 'video', maxCount: 1 },
 ]);
 
-// Admin (routes littérales déclarées avant "/:id" pour éviter tout conflit)
+// --- Routes admin (protégées par protectAdmin) ---
 router.get('/admin/all', protectAdmin, getAllProductsAdmin);
 router.post('/', protectAdmin, productFiles, createProduct);
 router.put('/:id', protectAdmin, productFiles, updateProduct);
 router.patch('/:id/toggle', protectAdmin, toggleProductActive);
 router.delete('/:id', protectAdmin, deleteProduct);
 
-// Public
-router.get('/', getProducts);
-router.get('/:id', getProductById);
+// identifyProduct est non bloquant : si un token produit est présent, il ajoute req.productId
+router.get('/', identifyProduct, getProducts);
+router.get('/:id', identifyProduct, getProductById);
+
+// --- Route protégée pour le produit connecté ---
+router.get('/me', protectProduct, getMyProduct);
 
 export default router;

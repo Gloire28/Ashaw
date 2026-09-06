@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useProductAuth } from '../context/ProductAuthContext.jsx';
 import api from '../services/api.js';
 import ProductCard from '../components/product/ProductCard.jsx';
 import Loader from '../components/common/Loader.jsx';
 
 const Shop = () => {
+  const { isAuthenticated } = useProductAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('Tous');
@@ -15,10 +17,13 @@ const Shop = () => {
     });
   }, []);
 
+  // Si l'utilisateur est authentifié, le backend filtre déjà par catégorie opposée,
+  // donc on désactive le filtre manuel pour éviter la confusion.
   const categories = useMemo(() => {
+    if (isAuthenticated) return ['Tous']; // pas de filtre supplémentaire
     const set = new Set(products.map((p) => p.category));
     return ['Tous', ...set];
-  }, [products]);
+  }, [products, isAuthenticated]);
 
   const filtered = category === 'Tous' ? products : products.filter((p) => p.category === category);
 

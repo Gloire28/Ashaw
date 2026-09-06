@@ -3,29 +3,34 @@ import { Link } from 'react-router-dom';
 const steps = [
   {
     title: 'Tu regardes',
-    text: "Photos, vidéo, prix à l'heure : tout est sur la fiche du produit, sans créer de compte.",
+    text: "Photos, vidéo, prix à l'heure : tout est sur la fiche du produit.",
   },
   {
-    title: 'Tu discutes',
-    text: "Un pseudo, un âge, et tu es en contact direct avec le vendeur pour poser tes questions.",
+    title: 'Tu contactes',
+    text: "Si tu es connecté en tant que produit (F ou N), tu peux contacter les propriétaires de la catégorie opposée.",
   },
   {
     title: 'Vous vous accordez',
-    text: "Le vendeur te propose un créneau. Une fois d'accord, la réservation est enregistrée.",
+    text: "L'administrateur met en relation et vous permet de discuter pour finaliser la location.",
   },
 ];
 
 const Home = () => (
   <>
     <section className="container" style={{ paddingTop: '64px', paddingBottom: '48px' }}>
-      <h1 style={{ maxWidth: '14ch' }}>Loue ce dont tu as besoin, à l'heure près.</h1>
+      <h1 style={{ maxWidth: '14ch' }}>Loue et propose tes services à l'heure.</h1>
       <p style={{ fontSize: '1.05rem', marginBottom: '32px' }}>
-        Parcours le catalogue, discute directement avec le vendeur, et fixez ensemble le
-        créneau de location. Pas de compte à créer.
+        Crée ton compte produit (catégorie F ou N), découvre les offres de la catégorie opposée,
+        et discute directement avec les propriétaires via l’administrateur.
       </p>
-      <Link to="/boutique" className="btn btn--accent">
-        Voir la boutique
-      </Link>
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+        <Link to="/boutique" className="btn btn--accent">
+          Voir la boutique
+        </Link>
+        <Link to="/register" className="btn btn--outline">
+          Créer mon compte produit
+        </Link>
+      </div>
     </section>
 
     <section className="container" style={{ paddingBottom: '64px' }}>

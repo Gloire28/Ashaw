@@ -13,46 +13,57 @@ export const initSocket = (httpServer) => {
   });
 
   io.use((socket, next) => {
-    // 1. Récupération du sessionId depuis la query string (envoyé par le client)
-    const sessionId = socket.handshake.query.sessionId;
-
-    // 2. Récupération du token admin depuis l'objet auth (envoyé par le frontend admin)
+    // 1. Récupérer le token admin depuis auth.token
     const token = socket.handshake.auth.token;
-
-    // 3. Si un token est fourni, on tente de l'authentifier comme admin
     if (token) {
       try {
         const decoded = jwt.verify(token, config.jwtSecret);
-        socket.isAdmin = true;
-        socket.admin = decoded; // optionnel
-        // On garde aussi le sessionId si présent (utile pour l'admin)
-        if (sessionId) socket.sessionId = sessionId;
-        return next();
-      } catch (_error) {
-        // Token invalide : on ne bloque pas, on tente la suite
+        // On suppose que le token admin contient un champ 'id' (l'identifiant de l'admin)
+        if (decoded.id) {
+          socket.isAdmin = true;
+          socket.adminId = decoded.id;
+          return next();
+        }
+      } catch (_) {
+        // Token invalide, on continue
       }
     }
 
-    // 4. Si pas de token admin valide, on tente une session client
-    if (sessionId) {
-      socket.sessionId = sessionId;
-      return next();
+    // 2. Récupérer le token produit depuis auth.productToken ou query.productToken
+    const productToken = socket.handshake.auth.productToken || socket.handshake.query.productToken;
+    if (productToken) {
+      try {
+        const decoded = jwt.verify(productToken, config.jwtSecret);
+        if (decoded.productId) {
+          socket.isProduct = true;
+          socket.productId = decoded.productId;
+          socket.productOwnerId = decoded.ownerId;
+          return next();
+        }
+      } catch (_) {
+        // Token invalide, on continue
+      }
     }
 
-    // 5. Aucune authentification trouvée → refus
-    return next(new Error('Authentification requise : sessionId ou token admin manquant'));
+    // 3. Aucune authentification valide
+    return next(new Error('Authentification requise (token admin ou produit)'));
   });
 
   io.on('connection', (socket) => {
+    // Rejoindre une conversation (room)
     socket.on('join_conversation', (conversationId) => {
       socket.join(conversationId);
     });
 
-    socket.on('join_admin', () => {
-      if (socket.isAdmin) {
-        socket.join('admin_room');
-      }
-    });
+    // L'admin rejoint la room globale
+    if (socket.isAdmin) {
+      socket.join('admin_room');
+    }
+
+    // Les produits rejoignent leur room personnelle (pour notifications)
+    if (socket.isProduct && socket.productId) {
+      socket.join(socket.productId);
+    }
 
     socket.on('disconnect', () => {});
   });

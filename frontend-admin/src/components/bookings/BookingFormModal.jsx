@@ -2,10 +2,14 @@ import { useState } from 'react';
 import api from '../../services/api.js';
 
 const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) => {
-  const [clientPseudo, setClientPseudo] = useState(conversation?.clientPseudo || '');
-  const [clientAge, setClientAge] = useState(conversation?.clientAge || '');
+  // Dans le nouveau système, conversation a initiator et target (des produits)
+  // On pré-remplit avec les infos du produit initiateur (ou target selon le contexte)
+  const defaultProduct = conversation?.initiator || conversation?.target || products[0];
+  
+  const [clientPseudo, setClientPseudo] = useState(conversation?.initiator?.name || '');
+  const [clientAge, setClientAge] = useState('');
   const [clientContact, setClientContact] = useState('');
-  const [productId, setProductId] = useState(conversation?.product?.id || products[0]?.id || '');
+  const [productId, setProductId] = useState(conversation?.initiator?.id || conversation?.target?.id || products[0]?.id || '');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [durationHours, setDurationHours] = useState('');
@@ -13,7 +17,8 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const product = conversation?.product || products.find((p) => p.id === productId);
+  // Récupérer le produit sélectionné
+  const product = products.find((p) => p.id === productId) || conversation?.initiator || conversation?.target;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,10 +29,15 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
       return;
     }
 
+    if (Number(clientAge) < 13 || Number(clientAge) > 120) {
+      setError('Âge invalide (entre 13 et 120 ans).');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post('/api/bookings', {
-        conversationId: conversation?.id,
+        conversationId: conversation?.id || undefined,
         productId,
         clientPseudo: clientPseudo.trim(),
         clientAge: Number(clientAge),
@@ -39,7 +49,7 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
       });
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || 'Impossible de créer la réservation.');
+      setError(err.response?.data?.error || 'Impossible de créer la réservation.');
     } finally {
       setLoading(false);
     }
@@ -57,7 +67,7 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
 
         {product && (
           <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>
-            Produit : <strong>{product.name}</strong>
+            Produit : <strong>{product.name}</strong> ({product.category})
           </p>
         )}
 
@@ -68,7 +78,7 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
               <select id="productId" value={productId} onChange={(e) => setProductId(e.target.value)}>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
+                    {p.name} ({p.category})
                   </option>
                 ))}
               </select>
@@ -77,15 +87,16 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
 
           <div className="field-row">
             <div className="field">
-              <label htmlFor="clientPseudo">Pseudo du client</label>
+              <label htmlFor="clientPseudo">Nom du client *</label>
               <input
                 id="clientPseudo"
                 value={clientPseudo}
                 onChange={(e) => setClientPseudo(e.target.value)}
+                required
               />
             </div>
             <div className="field">
-              <label htmlFor="clientAge">Âge</label>
+              <label htmlFor="clientAge">Âge du client *</label>
               <input
                 id="clientAge"
                 type="number"
@@ -93,12 +104,13 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
                 max={120}
                 value={clientAge}
                 onChange={(e) => setClientAge(e.target.value)}
+                required
               />
             </div>
           </div>
 
           <div className="field">
-            <label htmlFor="clientContact">Contact (téléphone / WhatsApp — optionnel)</label>
+            <label htmlFor="clientContact">Contact (téléphone / WhatsApp)</label>
             <input
               id="clientContact"
               value={clientContact}
@@ -109,20 +121,27 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
 
           <div className="field-row">
             <div className="field">
-              <label htmlFor="date">Date</label>
-              <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <label htmlFor="date">Date *</label>
+              <input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
             </div>
             <div className="field">
-              <label htmlFor="startTime">Heure de début</label>
+              <label htmlFor="startTime">Heure de début *</label>
               <input
                 id="startTime"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
+                required
               />
             </div>
             <div className="field">
-              <label htmlFor="durationHours">Durée (heures)</label>
+              <label htmlFor="durationHours">Durée (heures) *</label>
               <input
                 id="durationHours"
                 type="number"
@@ -131,6 +150,7 @@ const BookingFormModal = ({ conversation, products = [], onClose, onSuccess }) =
                 max={24}
                 value={durationHours}
                 onChange={(e) => setDurationHours(e.target.value)}
+                required
               />
             </div>
           </div>

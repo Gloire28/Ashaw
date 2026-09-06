@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import api from '../../services/api.js';
 import MessageBubble from './MessageBubble.jsx';
 import ChatInput from './ChatInput.jsx';
-import BookingFormModal from '../bookings/BookingFormModal.jsx';
 import Loader from '../common/Loader.jsx';
 import { conversationStatusLabels } from '../../utils/formatTime.js';
 
@@ -10,23 +9,17 @@ const ConversationDetail = ({
   conversationId,
   socketRef,
   onChanged,
-  sessionGroups = {},
-  onSelectConversation,
-  onFilterBySession, // nouvelle prop pour filtrer par sessionId
 }) => {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [bookingSaved, setBookingSaved] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     if (!conversationId) return;
     let cancelled = false;
     setLoading(true);
-    setBookingSaved(false);
 
     api.get(`/api/conversations/${conversationId}`).then(({ data }) => {
       if (cancelled) return;
@@ -55,6 +48,42 @@ const ConversationDetail = ({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
+  const handleActivate = async () => {
+    try {
+      await api.patch(`/api/admin/conversations/${conversationId}/activate`);
+      onChanged?.();
+    } catch (error) {
+      alert('Erreur lors de l\'activation : ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Supprimer définitivement cette conversation ? Les messages et fichiers seront supprimés.')) return;
+    try {
+      await api.delete(`/api/admin/conversations/${conversationId}`);
+      onChanged?.();
+    } catch (error) {
+      alert('Erreur lors de la suppression : ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  const handleSend = async ({ content, file }) => {
+    if (!conversationId) return;
+    setSending(true);
+    try {
+      const formData = new FormData();
+      if (content) formData.append('content', content);
+      if (file) formData.append('file', file);
+      await api.post(`/api/messages/${conversationId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    } catch (error) {
+      alert('Erreur lors de l\'envoi : ' + (error.response?.data?.error || error.message));
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (!conversationId) {
     return (
       <div className="conv-detail">
@@ -71,113 +100,50 @@ const ConversationDetail = ({
     );
   }
 
-  const handleSend = async ({ content, file }) => {
-    setSending(true);
-    try {
-      if (file) {
-        const form = new FormData();
-        form.append('media', file);
-        await api.post(`/api/messages/${conversationId}`, form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      } else {
-        await api.post(`/api/messages/${conversationId}`, { content });
-      }
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleArchive = async () => {
-    await api.patch(`/api/conversations/${conversationId}/archive`);
-    setConversation((prev) => ({ ...prev, status: 'ARCHIVED' }));
-    onChanged?.();
-  };
-
   return (
     <div className="conv-detail">
       <div className="conv-detail__header">
-        <img src={conversation.product.mainPhotoUrl} alt="" />
+        <img src={conversation.initiator.mainPhotoUrl} alt="" />
         <div>
           <div className="conv-detail__title">
-            {conversation.clientPseudo} · {conversation.clientAge} ans
+            {conversation.initiator.name} ({conversation.initiator.category}) → {conversation.target.name} ({conversation.target.category})
           </div>
           <div className="conv-detail__subtitle">
-            {conversation.product.name} — {conversationStatusLabels[conversation.status]}
-          </div>
-          <div className="conv-detail__session" style={{ fontSize: '0.75rem', color: 'var(--ink-faint)' }}>
-            Session : {conversation.sessionId}
+            Statut : {conversationStatusLabels[conversation.status] || conversation.status}
+            {conversation.status !== 'DELETED' && (
+              <> • Expire le : {new Date(conversation.expiresAt).toLocaleString()}</>
+            )}
           </div>
         </div>
         <div className="conv-detail__header-actions">
-          {conversation.status !== 'ARCHIVED' && (
-            <button className="btn btn--ghost btn--sm" onClick={handleArchive}>
-              Archiver
+          {conversation.status === 'PENDING' && (
+            <button className="btn btn--accent btn--sm" onClick={handleActivate}>
+              ✅ Activer
             </button>
           )}
-          <button
-            className="btn btn--accent btn--sm"
-            onClick={() => setBookingModalOpen(true)}
-            disabled={bookingSaved}
-          >
-            {bookingSaved ? 'Réservation créée ✓' : '📅 Créer une réservation'}
-          </button>
-          {onFilterBySession && (
-            <button
-              className="btn btn--ghost btn--sm"
-              onClick={() => onFilterBySession(conversation.sessionId)}
-              title="Voir toutes les discussions de cette session"
-            >
-              🔗 Voir toutes
+          {conversation.status !== 'DELETED' && (
+            <button className="btn btn--danger btn--sm" onClick={handleDelete}>
+              🗑️ Supprimer
             </button>
           )}
         </div>
       </div>
 
-      {(() => {
-        const siblings = (sessionGroups[conversation.sessionId] || []).filter(
-          (c) => c.id !== conversationId
-        );
-        if (siblings.length === 0) return null;
-        return (
-          <div className="banner" style={{ borderLeftColor: 'var(--ink-faint)', background: 'var(--surface-sunken)' }}>
-            Même session navigateur — {siblings.length} autre{siblings.length > 1 ? 's' : ''}{' '}
-            discussion{siblings.length > 1 ? 's' : ''} :{' '}
-            {siblings.map((s, i) => (
-              <span key={s.id}>
-                <button
-                  className="btn btn--ghost btn--sm"
-                  style={{ padding: '0.1em 0.6em', marginLeft: '4px' }}
-                  onClick={() => onSelectConversation?.(s.id)}
-                >
-                  {s.product.name}
-                </button>
-                {i < siblings.length - 1 ? ' ' : ''}
-              </span>
-            ))}
-          </div>
-        );
-      })()}
+      <div className="conv-detail__participants" style={{ fontSize: '0.85rem', color: 'var(--ink-faint)', padding: '8px 16px', background: 'var(--surface-sunken)' }}>
+        Initiateur: {conversation.initiator.name} (ID: {conversation.initiatorId}) | 
+        Cible: {conversation.target.name} (ID: {conversation.targetId})
+      </div>
 
       <div className="conv-detail__messages" ref={scrollRef}>
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble key={message.id} message={message} adminMode />
         ))}
       </div>
 
-      <div className="conv-detail__footer">
-        <ChatInput onSubmit={handleSend} disabled={sending} />
-      </div>
-
-      {bookingModalOpen && (
-        <BookingFormModal
-          conversation={conversation}
-          onClose={() => setBookingModalOpen(false)}
-          onSuccess={() => {
-            setBookingModalOpen(false);
-            setBookingSaved(true);
-          }}
-        />
+      {conversation.status !== 'DELETED' && conversation.status !== 'EXPIRED' && (
+        <div className="conv-detail__footer">
+          <ChatInput onSubmit={handleSend} disabled={sending} />
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import prisma from '../config/database.js';
-import { deleteMedia } from '../services/storage.js';
+import { deleteMedia } from './storage.js';
 import { getIO } from '../config/socket.js';
 
 /**
@@ -24,6 +24,7 @@ export const startCleanupJobs = () => {
       });
       if (expiredConversations.count > 0) {
         console.log(`[Cleanup] ${expiredConversations.count} conversations expirées.`);
+        // Notifier l'admin des expirations (optionnel)
         const io = getIO();
         io.to('admin_room').emit('conversations_cleaned');
       }
@@ -43,7 +44,7 @@ export const startCleanupJobs = () => {
       });
 
       for (const conv of toDelete) {
-        // Supprimer les fichiers hébergés sur Backblaze
+        // Supprimer les fichiers hébergés sur Backblaze (via storage.js)
         for (const message of conv.messages) {
           if (message.mediaUrl) {
             try {

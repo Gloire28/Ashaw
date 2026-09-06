@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-// Le sessionId n'est plus un cookie (bloqué cross-site par défaut sur
-// Safari/iOS) : on le génère une fois côté client, on le garde en
-// localStorage, et on l'envoie explicitement sur chaque requête.
 const SESSION_KEY = 'booking_session_id';
+const TOKEN_KEY = 'product_token';
 
 export const getSessionId = () => {
   let sessionId = localStorage.getItem(SESSION_KEY);
@@ -14,15 +12,21 @@ export const getSessionId = () => {
   return sessionId;
 };
 
+export const getProductToken = () => localStorage.getItem(TOKEN_KEY);
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Header attaché dynamiquement à chaque requête (pas figé à la création de
-// l'instance), pour être sûr d'avoir toujours la valeur courante.
-api.interceptors.request.use((request) => {
-  request.headers['X-Session-Id'] = getSessionId();
-  return request;
+// Interceptor : priorité au token produit, sinon sessionId
+api.interceptors.request.use((config) => {
+  const token = getProductToken();
+  if (token) {
+    config.headers['X-Product-Token'] = token;
+  } else {
+    config.headers['X-Session-Id'] = getSessionId();
+  }
+  return config;
 });
 
 export default api;

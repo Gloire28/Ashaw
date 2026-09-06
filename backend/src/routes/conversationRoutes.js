@@ -3,21 +3,16 @@ import {
   startConversation,
   getMyConversations,
   getConversationById,
-  getAllConversationsAdmin,
-  archiveConversation,
-  getDashboardStats,
+  sendMessage,
 } from '../controllers/conversationController.js';
-import { protectAdmin } from '../middleware/authMiddleware.js';
+import { protectProduct } from '../middleware/productAuthMiddleware.js';
 
 const router = Router();
 
-// Routes littérales déclarées avant "/:id"
-router.post('/', startConversation);
-router.get('/mine', getMyConversations);
-router.get('/admin/all', protectAdmin, getAllConversationsAdmin);
-router.get('/admin/stats', protectAdmin, getDashboardStats);
-
-router.get('/:id', getConversationById);
-router.patch('/:id/archive', protectAdmin, archiveConversation);
+// Routes protégées par authentification produit
+router.post('/', protectProduct, startConversation);
+router.get('/mine', protectProduct, getMyConversations);
+router.get('/:id', protectProduct, getConversationById);
+router.post('/:conversationId/messages', protectProduct, sendMessage);
 
 export default router;

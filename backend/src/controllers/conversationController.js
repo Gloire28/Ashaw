@@ -1,61 +1,85 @@
 import prisma from '../config/database.js';
-import { generateUUID } from '../utils/generateUUID.js';
-import { isValidAge, isNonEmptyString } from '../utils/validators.js';
-import { config } from '../config/index.js';
-import {
-  countActiveConversations,
-  createConversation,
-  getActiveConversationsForSession,
-} from '../services/conversationService.js';
 import { getIO } from '../config/socket.js';
+import { config } from '../config/index.js';
+import { isNonEmptyString } from '../utils/validators.js';
 
-// --- Public (client) ---
+// --- Produits (authentifiés par protectProduct) ---
 
+/**
+ * Démarrer une conversation entre le produit connecté (initiateur) et un produit cible.
+ * Body : { targetProductId, message (texte) }
+ */
 export const startConversation = async (req, res, next) => {
   try {
-    const { pseudo, age, productId } = req.body;
+    const { targetProductId, message } = req.body;
+    const initiatorId = req.productId;
 
-    if (!isNonEmptyString(pseudo)) {
-      res.status(400);
-      throw new Error('Pseudo requis');
+    if (!targetProductId) {
+      return res.status(400).json({ error: 'Produit cible requis.' });
     }
-    if (!isValidAge(age)) {
-      res.status(400);
-      throw new Error('Âge invalide (entre 13 et 120 ans)');
-    }
-
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product || !product.isActive) {
-      res.status(404);
-      throw new Error('Produit introuvable');
+    if (!isNonEmptyString(message)) {
+      return res.status(400).json({ error: 'Message initial requis.' });
     }
 
-    // Le sessionId est généré côté client (localStorage) et envoyé en header —
-    // plus de cookie cross-site, bloqué par défaut sur Safari/iOS.
-    let sessionId = req.headers['x-session-id'];
-    if (!sessionId) {
-      sessionId = generateUUID();
+    // Récupérer les deux produits
+    const initiator = await prisma.product.findUnique({ where: { id: initiatorId } });
+    const target = await prisma.product.findUnique({ where: { id: targetProductId } });
+
+    if (!initiator || !target || !target.isActive) {
+      return res.status(404).json({ error: 'Produit cible introuvable ou désactivé.' });
     }
 
-    const activeCount = await countActiveConversations(sessionId);
-    if (activeCount >= config.maxActiveConversations) {
-      res.status(409);
-      throw new Error(
-        `Limite atteinte : ${config.maxActiveConversations} discussions actives maximum. Attends qu'une discussion expire ou soit clôturée.`
-      );
+    // Vérifier que les catégories sont différentes
+    if (initiator.category === target.category) {
+      return res.status(400).json({ error: 'Vous ne pouvez contacter que des produits de catégorie opposée.' });
     }
 
-    const conversation = await createConversation({
-      sessionId,
-      clientPseudo: pseudo.trim(),
-      clientAge: age,
-      productId,
+    // Vérifier qu'il n'existe pas déjà une conversation PENDING ou ACTIVE entre ces deux produits
+    const existing = await prisma.conversation.findFirst({
+      where: {
+        OR: [
+          { initiatorId, targetId: targetProductId },
+          { initiatorId: targetProductId, targetId: initiatorId },
+        ],
+        status: { in: ['PENDING', 'ACTIVE'] },
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (existing) {
+      return res.status(409).json({ error: 'Une discussion est déjà en cours avec ce produit.' });
+    }
+
+    // Créer la conversation
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const adminVisibleUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const conversation = await prisma.conversation.create({
+      data: {
+        initiatorId,
+        targetId: targetProductId,
+        status: 'PENDING',
+        expiresAt,
+        adminVisibleUntil,
+        messages: {
+          create: {
+            senderType: 'PRODUCT',
+            senderId: initiatorId,
+            content: message.trim(),
+          },
+        },
+      },
+      include: {
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
     });
 
+    // Notifier l'admin en temps réel
     try {
-      getIO().to('admin_room').emit('new_conversation', conversation);
-    } catch (_error) {
-      // socket pas encore initialisé : sans impact sur la création
+      const io = getIO();
+      io.to('admin_room').emit('new_conversation', conversation);
+    } catch (_) {
+      // Socket non initialisé
     }
 
     res.status(201).json(conversation);
@@ -64,86 +88,145 @@ export const startConversation = async (req, res, next) => {
   }
 };
 
+/**
+ * Récupère toutes les conversations visibles pour le produit connecté.
+ * Inclut les conversations où il est initiateur ou target, avec statut PENDING ou ACTIVE,
+ * et non expirées.
+ */
 export const getMyConversations = async (req, res, next) => {
   try {
-    const sessionId = req.headers['x-session-id'];
-    if (!sessionId) {
-      return res.json([]);
-    }
-    const conversations = await getActiveConversationsForSession(sessionId);
+    const productId = req.productId;
+    const now = new Date();
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        OR: [
+          { initiatorId: productId },
+          { targetId: productId },
+        ],
+        status: { in: ['PENDING', 'ACTIVE'] },
+        expiresAt: { gt: now },
+      },
+      include: {
+        initiator: true,
+        target: true,
+        messages: { orderBy: { createdAt: 'asc' }, take: 1 }, // dernier message pour l'aperçu
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
     res.json(conversations);
   } catch (error) {
     next(error);
   }
 };
 
+/**
+ * Récupère une conversation par son ID, avec tous les messages.
+ * Seul l'initiateur, le target ou l'admin peuvent y accéder.
+ * Vérifie que la conversation est encore visible (non expirée pour les produits).
+ */
 export const getConversationById = async (req, res, next) => {
   try {
-    const sessionId = req.headers['x-session-id'];
+    const { id } = req.params;
     const conversation = await prisma.conversation.findUnique({
-      where: { id: req.params.id },
-      include: { product: true, messages: { orderBy: { createdAt: 'asc' } } },
+      where: { id },
+      include: {
+        initiator: true,
+        target: true,
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
     });
 
     if (!conversation) {
-      res.status(404);
-      throw new Error('Discussion introuvable');
-    }
-    // Un client ne peut ouvrir que ses propres discussions ; l'admin voit tout.
-    if (!req.admin && conversation.sessionId !== sessionId) {
-      res.status(403);
-      throw new Error('Accès refusé');
+      return res.status(404).json({ error: 'Discussion introuvable.' });
     }
 
-    res.json(conversation);
+    // Admin voit tout
+    if (req.admin) {
+      return res.json(conversation);
+    }
+
+    // Produit : vérifier qu'il est initiateur ou target, et que la conversation n'est pas expirée
+    if (req.productId) {
+      const isParticipant = conversation.initiatorId === req.productId || conversation.targetId === req.productId;
+      if (!isParticipant) {
+        return res.status(403).json({ error: 'Accès refusé.' });
+      }
+      // Vérifier expiration
+      if (conversation.expiresAt < new Date()) {
+        return res.status(410).json({ error: 'Cette discussion a expiré.' });
+      }
+      return res.json(conversation);
+    }
+
+    return res.status(401).json({ error: 'Non authentifié.' });
   } catch (error) {
     next(error);
   }
 };
 
-// --- Admin ---
-
-export const getAllConversationsAdmin = async (req, res, next) => {
+/**
+ * Envoyer un message dans une conversation (par un produit).
+ * Seul le texte est autorisé.
+ * Vérifie que le produit est participant et que la conversation est active.
+ */
+export const sendMessage = async (req, res, next) => {
   try {
-    const conversations = await prisma.conversation.findMany({
-      include: {
-        product: true,
-        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+    const { conversationId } = req.params;
+    const { content } = req.body;
+
+    if (!isNonEmptyString(content)) {
+      return res.status(400).json({ error: 'Message texte requis.' });
+    }
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { initiator: true, target: true },
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Discussion introuvable.' });
+    }
+
+    // Vérifier que le produit est participant
+    const isParticipant = conversation.initiatorId === req.productId || conversation.targetId === req.productId;
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Accès refusé.' });
+    }
+
+    // Vérifier que la conversation est active
+    if (conversation.status !== 'ACTIVE') {
+      return res.status(403).json({ error: 'Cette discussion n\'est pas encore active.' });
+    }
+
+    // Vérifier expiration
+    if (conversation.expiresAt < new Date()) {
+      return res.status(410).json({ error: 'Cette discussion a expiré.' });
+    }
+
+    // Créer le message
+    const message = await prisma.message.create({
+      data: {
+        conversationId,
+        senderType: 'PRODUCT',
+        senderId: req.productId,
+        content: content.trim(),
       },
-      orderBy: { lastActivityAt: 'desc' },
     });
-    res.json(conversations);
-  } catch (error) {
-    next(error);
-  }
-};
 
-export const archiveConversation = async (req, res, next) => {
-  try {
-    const conversation = await prisma.conversation.update({
-      where: { id: req.params.id },
-      data: { status: 'ARCHIVED' },
+    // Mettre à jour la date de dernière activité
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
     });
-    res.json(conversation);
-  } catch (error) {
-    next(error);
-  }
-};
 
-export const getDashboardStats = async (req, res, next) => {
-  try {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // Notifier les participants (admin et l'autre produit)
+    const io = getIO();
+    io.to(conversationId).emit('new_message', message);
+    io.to('admin_room').emit('conversation_updated', { conversationId });
 
-    const [activeProducts, activeConversations, pendingConversations, todayMessages] =
-      await Promise.all([
-        prisma.product.count({ where: { isActive: true } }),
-        prisma.conversation.count({ where: { status: 'ACTIVE' } }),
-        prisma.conversation.count({ where: { status: 'ACTIVE', messages: { none: {} } } }),
-        prisma.message.count({ where: { createdAt: { gte: startOfDay } } }),
-      ]);
-
-    res.json({ activeProducts, activeConversations, pendingConversations, todayMessages });
+    res.status(201).json(message);
   } catch (error) {
     next(error);
   }

@@ -14,6 +14,7 @@ import conversationRoutes from './routes/conversationRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import productAuthRoutes from './routes/productAuthRoutes.js';
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/product-auth', productAuthRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 

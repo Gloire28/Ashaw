@@ -36,16 +36,10 @@ export const uploadMedia = async (file, folder = 'booking') => {
  * @param {string} publicUrl - L'URL publique du fichier (ou le key)
  * @param {string} resourceType - Ignoré ici, gardé pour compatibilité
  */
-export const deleteMedia = async (publicUrl, resourceType = 'image') => {
-  // Extraire la clé (key) depuis l'URL
-  // Ex: https://.../file/booking-storage/booking/123.jpg -> key = booking/123.jpg
-  const key = publicUrl.split(`/file/${bucketName}/`)[1];
+// Si tu utilises le format S3 (sans /file/)
+export const deleteMedia = async (publicUrl) => {
+  const key = publicUrl.split(`/${bucketName}/`)[1];
   if (!key) throw new Error('Impossible d\'extraire la clé depuis l\'URL');
-
-  const command = new DeleteObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-  });
-
+  const command = new DeleteObjectCommand({ Bucket: bucketName, Key: key });
   await s3Client.send(command);
 };
