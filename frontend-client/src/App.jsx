@@ -10,13 +10,16 @@ import ProductRegister from './pages/ProductRegister.jsx';
 import ProductLogin from './pages/ProductLogin.jsx';
 import ProductDashboard from './pages/ProductDashboard.jsx';
 
-// Composant de protection des routes privées
+// Route privée : redirige vers /login si non authentifié
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated } = useProductAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-  return children;
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+// Route publique : redirige vers /dashboard si déjà authentifié
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated } = useProductAuth();
+  return isAuthenticated ? <Navigate to="/dashboard" /> : children;
 };
 
 const App = () => (
@@ -24,16 +27,41 @@ const App = () => (
     <Navbar />
     <main>
       <Routes>
-        <Route path="/" element={<Home />} />
+        {/* Page d'accueil : redirige vers dashboard si connecté */}
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <Home />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <ProductRegister />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <ProductLogin />
+            </PublicRoute>
+          }
+        />
         <Route path="/boutique" element={<Shop />} />
         <Route path="/produit/:id" element={<ProductPage />} />
-        <Route path="/register" element={<ProductRegister />} />
-        <Route path="/login" element={<ProductLogin />} />
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <ProductDashboard />
-          </PrivateRoute>
-        } />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <ProductDashboard />
+            </PrivateRoute>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </main>

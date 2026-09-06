@@ -123,3 +123,36 @@ export const deleteConversation = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getDashboardStats = async (req, res, next) => {
+  try {
+    const now = new Date();
+
+    const [
+      totalProducts,
+      activeProducts,
+      totalConversations,
+      pendingConversations,
+      activeConversations,
+      expiredConversations,
+    ] = await Promise.all([
+      prisma.product.count(),
+      prisma.product.count({ where: { isActive: true } }),
+      prisma.conversation.count(),
+      prisma.conversation.count({ where: { status: 'PENDING' } }),
+      prisma.conversation.count({ where: { status: 'ACTIVE' } }),
+      prisma.conversation.count({ where: { status: 'EXPIRED' } }),
+    ]);
+
+    res.json({
+      totalProducts,
+      activeProducts,
+      totalConversations,
+      pendingConversations,
+      activeConversations,
+      expiredConversations,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

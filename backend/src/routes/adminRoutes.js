@@ -6,6 +6,7 @@ import {
   deleteConversation,
 } from '../controllers/adminConversationController.js';
 import { protectAdmin } from '../middleware/authMiddleware.js';
+import { getDashboardStats } from '../controllers/adminConversationController.js';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.get('/me', protectAdmin, getMe);
 router.get('/conversations', protectAdmin, getAllConversationsAdmin);
 router.patch('/conversations/:id/activate', protectAdmin, activateConversation);
 router.delete('/conversations/:id', protectAdmin, deleteConversation);
+router.get('/dashboard/stats', protectAdmin, getDashboardStats);
 
 export default router;

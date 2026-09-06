@@ -6,7 +6,7 @@ const DashboardPage = () => {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    api.get('/api/conversations/admin/stats').then(({ data }) => setStats(data));
+    api.get('/api/admin/dashboard/stats').then(({ data }) => setStats(data));
   }, []);
 
   return (

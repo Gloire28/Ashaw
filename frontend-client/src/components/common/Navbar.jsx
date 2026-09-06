@@ -3,6 +3,11 @@ import { useProductAuth } from '../context/ProductAuthContext.jsx';
 
 const Navbar = () => {
   const { isAuthenticated, logout } = useProductAuth();
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <header className="nav">
