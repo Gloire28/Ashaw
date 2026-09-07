@@ -3,31 +3,14 @@ import jwt from 'jsonwebtoken';
 import prisma from '../config/database.js';
 import { config } from '../config/index.js';
 import { isValidAge, isValidQuartier, isValidCategory } from '../utils/validators.js';
+import { uploadMedia } from '../services/storage.js';
 
-/**
- * Inscription d'un nouveau propriétaire avec création simultanée du produit
- * Body attendu :
- * {
- *   username: string,
- *   password: string,
- *   age: number,
- *   quartier: string,
- *   product: {
- *     name: string,
- *     description: string,
- *     category: 'F' | 'N',
- *     pricePerHour: number,
- *     mainPhotoUrl: string,
- *     additionalPhotos?: string[],
- *     videoUrl?: string
- *   }
- * }
- */
 export const registerProductOwner = async (req, res, next) => {
   try {
+    // 1. Récupérer les champs
     const { username, password, age, quartier, product } = req.body;
 
-    // 1. Validations de base
+    // 2. Validations de base
     if (!username || typeof username !== 'string' || username.trim().length < 3) {
       return res.status(400).json({ error: 'Le pseudo doit contenir au moins 3 caractères.' });
     }
@@ -41,11 +24,11 @@ export const registerProductOwner = async (req, res, next) => {
       return res.status(400).json({ error: 'Le quartier est requis.' });
     }
 
-    // 2. Validation du produit
+    // 3. Validation du produit (objet imbriqué)
     if (!product || typeof product !== 'object') {
       return res.status(400).json({ error: 'Les informations du produit sont requises.' });
     }
-    const { name, description, category, pricePerHour, mainPhotoUrl } = product;
+    const { name, description, category, pricePerHour } = product;
     if (!name || name.trim().length < 3) {
       return res.status(400).json({ error: 'Le nom du produit doit contenir au moins 3 caractères.' });
     }
@@ -55,14 +38,27 @@ export const registerProductOwner = async (req, res, next) => {
     if (!isValidCategory(category)) {
       return res.status(400).json({ error: 'La catégorie doit être F ou N.' });
     }
-    if (typeof pricePerHour !== 'number' || pricePerHour <= 0) {
+    const parsedPrice = parseFloat(pricePerHour);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
       return res.status(400).json({ error: 'Le prix doit être un nombre positif.' });
     }
-    if (!mainPhotoUrl || typeof mainPhotoUrl !== 'string') {
+
+    // 4. Gérer les fichiers uploadés (depuis req.files avec les noms product[mainPhoto], etc.)
+    const mainPhotoFile = req.files?.['product[mainPhoto]']?.[0];
+    if (!mainPhotoFile) {
       return res.status(400).json({ error: 'La photo principale est requise.' });
     }
+    const additionalPhotoFiles = req.files?.['product[additionalPhotos]'] || [];
+    const videoFile = req.files?.['product[video]']?.[0];
 
-    // 3. Vérifier l'unicité du pseudo
+    // Upload vers Backblaze
+    const mainPhotoUrl = await uploadMedia(mainPhotoFile, 'booking/products');
+    const additionalPhotos = await Promise.all(
+      additionalPhotoFiles.map((file) => uploadMedia(file, 'booking/products'))
+    );
+    const videoUrl = videoFile ? await uploadMedia(videoFile, 'booking/products') : null;
+
+    // 5. Vérifier l'unicité du pseudo
     const existingOwner = await prisma.productOwner.findUnique({
       where: { username: username.trim() },
     });
@@ -70,12 +66,11 @@ export const registerProductOwner = async (req, res, next) => {
       return res.status(409).json({ error: 'Ce pseudo est déjà utilisé.' });
     }
 
-    // 4. Hacher le mot de passe
+    // 6. Hacher le mot de passe
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 5. Créer le propriétaire et le produit dans une transaction
+    // 7. Créer propriétaire et produit dans une transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Créer le propriétaire
       const owner = await tx.productOwner.create({
         data: {
           username: username.trim(),
@@ -85,16 +80,15 @@ export const registerProductOwner = async (req, res, next) => {
         },
       });
 
-      // Créer le produit lié au propriétaire
       const newProduct = await tx.product.create({
         data: {
           name: name.trim(),
           description: description.trim(),
-          category,
-          pricePerHour,
-          mainPhotoUrl: mainPhotoUrl.trim(),
-          additionalPhotos: product.additionalPhotos || [],
-          videoUrl: product.videoUrl || null,
+          category: category,
+          pricePerHour: parsedPrice,
+          mainPhotoUrl,
+          additionalPhotos,
+          videoUrl,
           ownerId: owner.id,
         },
       });
@@ -102,7 +96,7 @@ export const registerProductOwner = async (req, res, next) => {
       return { owner, product: newProduct };
     });
 
-    // 6. Générer le token JWT (contient ownerId et productId)
+    // 8. Générer le token JWT
     const token = jwt.sign(
       {
         ownerId: result.owner.id,
@@ -112,7 +106,7 @@ export const registerProductOwner = async (req, res, next) => {
       { expiresIn: '7d' }
     );
 
-    // 7. Réponse
+    // 9. Réponse
     res.status(201).json({
       token,
       owner: {
@@ -124,13 +118,15 @@ export const registerProductOwner = async (req, res, next) => {
       product: result.product,
     });
   } catch (error) {
+    console.error('❌ ERREUR DANS REGISTER :', error);
+    console.error('Détails :', error.message, error.stack);
     next(error);
   }
 };
 
 /**
  * Connexion d'un propriétaire existant
- * Body attendu : { username, password }
+
  */
 export const loginProductOwner = async (req, res, next) => {
   try {

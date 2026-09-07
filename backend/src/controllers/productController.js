@@ -97,19 +97,20 @@ export const getProductById = async (req, res, next) => {
   }
 };
 
-/**
- * Récupère le produit du propriétaire connecté (son propre produit).
- * Nécessite l'authentification produit (protectProduct).
- */
+
 export const getMyProduct = async (req, res, next) => {
   try {
     const product = await prisma.product.findUnique({
       where: { id: req.productId },
       include: { owner: true },
     });
+
+    console.log('📦 Produit récupéré pour dashboard :', product);
+
     if (!product) {
       return res.status(404).json({ error: 'Produit introuvable.' });
     }
+
     res.json(product);
   } catch (error) {
     next(error);

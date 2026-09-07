@@ -5,14 +5,14 @@ import {
   getConversationById,
   sendMessage,
 } from '../controllers/conversationController.js';
-import { protectProduct } from '../middleware/productAuthMiddleware.js';
+import { identifyProduct, protectProduct } from '../middleware/productAuthMiddleware.js';
 
 const router = Router();
 
 // Routes protégées par authentification produit
-router.post('/', protectProduct, startConversation);
-router.get('/mine', protectProduct, getMyConversations);
-router.get('/:id', protectProduct, getConversationById);
-router.post('/:conversationId/messages', protectProduct, sendMessage);
+router.post('/', identifyProduct, protectProduct, startConversation);
+router.get('/mine', identifyProduct, protectProduct, getMyConversations);
+router.get('/:id', identifyProduct, getConversationById);
+router.post('/:conversationId/messages', identifyProduct, sendMessage);
 
 export default router;

@@ -290,3 +290,114 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Conversation list dans le dashboard */
+.dashboard-conversations__layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--space-3);
+  min-height: 400px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.conversation-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.conversation-list__item {
+  padding: var(--space-3);
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.2s;
+}
+
+.conversation-list__item:hover {
+  background: var(--surface-sunken);
+}
+
+.conversation-list__item.active {
+  background: var(--surface-sunken);
+  border-left: 3px solid var(--accent);
+}
+
+.conversation-list__info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.conversation-list__name {
+  font-weight: 500;
+}
+
+.conversation-list__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+
+.conversation-list__last-message {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-list__expires {
+  font-size: 0.7rem;
+}
+
+.conversation-view-container {
+  padding: var(--space-3);
+  min-height: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  background: var(--paper);
+}
+
+/* ConversationView */
+.conv-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  max-height: 500px;
+}
+
+.conv-view__header {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--space-2);
+}
+
+.conv-view__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 200px;
+  max-height: 350px;
+}
+
+.conv-view__empty {
+  color: var(--ink-faint);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.conv-view__footer {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-2);
+  margin-top: auto;
+}

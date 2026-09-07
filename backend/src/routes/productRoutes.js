@@ -28,11 +28,11 @@ router.put('/:id', protectAdmin, productFiles, updateProduct);
 router.patch('/:id/toggle', protectAdmin, toggleProductActive);
 router.delete('/:id', protectAdmin, deleteProduct);
 
+// --- Route protégée pour le produit connecté ---
+router.get('/me', identifyProduct, protectProduct, getMyProduct);
+
 // identifyProduct est non bloquant : si un token produit est présent, il ajoute req.productId
 router.get('/', identifyProduct, getProducts);
 router.get('/:id', identifyProduct, getProductById);
-
-// --- Route protégée pour le produit connecté ---
-router.get('/me', protectProduct, getMyProduct);
 
 export default router;

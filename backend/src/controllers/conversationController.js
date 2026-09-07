@@ -101,16 +101,15 @@ export const getMyConversations = async (req, res, next) => {
     const conversations = await prisma.conversation.findMany({
       where: {
         OR: [
-          { initiatorId: productId },
-          { targetId: productId },
+          { initiatorId: productId, status: { in: ['PENDING', 'ACTIVE'] } },
+          { targetId: productId, status: 'ACTIVE' }, // target ne voit que les ACTIVE
         ],
-        status: { in: ['PENDING', 'ACTIVE'] },
         expiresAt: { gt: now },
       },
       include: {
         initiator: true,
         target: true,
-        messages: { orderBy: { createdAt: 'asc' }, take: 1 }, // dernier message pour l'aperçu
+        messages: { orderBy: { createdAt: 'asc' }, take: 1 },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -189,23 +188,51 @@ export const sendMessage = async (req, res, next) => {
       return res.status(404).json({ error: 'Discussion introuvable.' });
     }
 
-    // Vérifier que le produit est participant
+    // SI ADMIN : autoriser l'envoi sans restriction de participant
+    if (req.admin) {
+      // L'admin peut envoyer n'importe quel message (texte uniquement ?)
+      // On crée le message avec senderType 'ADMIN'
+      const message = await prisma.message.create({
+        data: {
+          conversationId,
+          senderType: 'ADMIN',
+          senderId: req.admin.id, // ou null, selon votre schéma
+          content: content.trim(),
+        },
+      });
+
+      // Mettre à jour la date de dernière activité
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      });
+
+      const io = getIO();
+      io.to(conversationId).emit('new_message', message);
+      io.to('admin_room').emit('conversation_updated', { conversationId });
+      return res.status(201).json(message);
+    }
+
+    // SINON, produit : vérifications existantes
     const isParticipant = conversation.initiatorId === req.productId || conversation.targetId === req.productId;
     if (!isParticipant) {
       return res.status(403).json({ error: 'Accès refusé.' });
     }
 
-    // Vérifier que la conversation est active
-    if (conversation.status !== 'ACTIVE') {
-      return res.status(403).json({ error: 'Cette discussion n\'est pas encore active.' });
+    if (conversation.status === 'PENDING') {
+      if (conversation.initiatorId !== req.productId) {
+        return res.status(403).json({ error: 'Cette discussion n\'est pas encore active pour vous.' });
+      }
+    } else if (conversation.status === 'ACTIVE') {
+      // Les deux produits peuvent envoyer
+    } else {
+      return res.status(403).json({ error: 'Cette discussion n\'est pas active.' });
     }
 
-    // Vérifier expiration
     if (conversation.expiresAt < new Date()) {
       return res.status(410).json({ error: 'Cette discussion a expiré.' });
     }
 
-    // Créer le message
     const message = await prisma.message.create({
       data: {
         conversationId,
@@ -215,18 +242,30 @@ export const sendMessage = async (req, res, next) => {
       },
     });
 
-    // Mettre à jour la date de dernière activité
     await prisma.conversation.update({
       where: { id: conversationId },
       data: { updatedAt: new Date() },
     });
 
-    // Notifier les participants (admin et l'autre produit)
     const io = getIO();
     io.to(conversationId).emit('new_message', message);
     io.to('admin_room').emit('conversation_updated', { conversationId });
 
     res.status(201).json(message);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMessages = async (req, res, next) => {
+  try {
+    const { conversationId } = req.params;
+    // La vérification d'accès est déjà faite par le middleware ou le contrôleur parent
+    const messages = await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json(messages);
   } catch (error) {
     next(error);
   }

@@ -1,5 +1,5 @@
-import { NavLink } from 'react-router-dom';
-import { useProductAuth } from '../context/ProductAuthContext.jsx';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useProductAuth } from '../../context/ProductAuthContext.jsx';
 
 const Navbar = () => {
   const { isAuthenticated, logout } = useProductAuth();
@@ -36,7 +36,7 @@ const Navbar = () => {
               <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
                 Tableau de bord
               </NavLink>
-              <button onClick={logout} className="btn btn--ghost" style={{ marginLeft: '8px' }}>
+              <button onClick={handleLogout} className="btn btn--ghost" style={{ marginLeft: '8px' }}>
                 Déconnexion
               </button>
             </>

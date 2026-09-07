@@ -116,7 +116,7 @@ const ProductRegister = () => {
             <label>Catégorie *</label>
             <div className="radio-group">
               <label><input type="radio" name="category" value="F" checked={form.category === 'F'} onChange={handleChange} /> F</label>
-              <label><input type="radio" name="category" value="N" checked={form.category === 'N'} onChange={handleChange} /> N</label>
+              <label><input type="radio" name="category" value="N" checked={form.category === 'N'} onChange={handleChange} /> M</label>
             </div>
           </div>
           <div className="field">
