@@ -35,7 +35,6 @@ const ConversationView = ({ conversationId, socketRef, onConversationActivated }
         console.error('Erreur chargement conversation :', err);
       });
 
-    // Rejoindre la room de la conversation pour recevoir les messages en temps réel
     const socket = socketRef.current;
     if (socket) {
       socket.emit('join_conversation', conversationId);
@@ -46,7 +45,7 @@ const ConversationView = ({ conversationId, socketRef, onConversationActivated }
     };
   }, [conversationId, socketRef]);
 
-  // Écouter les nouveaux messages
+  // Écouter les événements socket en temps réel
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -54,9 +53,7 @@ const ConversationView = ({ conversationId, socketRef, onConversationActivated }
     const handleNewMessage = (message) => {
       if (message.conversationId === conversationId) {
         setMessages((prev) => [...prev, message]);
-        // Mettre à jour le statut si la conversation est activée (changement de status)
         if (message.senderType === 'SYSTEM') {
-          // Si on reçoit un message système d'activation, recharger la conversation
           api.get(`/api/conversations/${conversationId}`)
             .then(({ data }) => setConversation(data))
             .catch(console.error);
@@ -64,25 +61,26 @@ const ConversationView = ({ conversationId, socketRef, onConversationActivated }
       }
     };
 
-    socket.on('new_message', handleNewMessage);
-    socket.on('conversation_activated', () => {
-      // La conversation a été activée, recharger pour voir le nouveau statut
+    const handleConversationActivated = () => {
       api.get(`/api/conversations/${conversationId}`)
         .then(({ data }) => {
           setConversation(data);
           setMessages(data.messages || []);
-          onConversationActivated?.(); // Notifier le parent pour rafraîchir la liste
+          onConversationActivated?.();
         })
         .catch(console.error);
-    });
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('conversation_activated', handleConversationActivated);
 
     return () => {
       socket.off('new_message', handleNewMessage);
-      socket.off('conversation_activated');
+      socket.off('conversation_activated', handleConversationActivated);
     };
   }, [conversationId, socketRef, onConversationActivated]);
 
-  // Défiler automatiquement vers le bas
+  // Scroll automatique vers le bas lors de la réception d'un message
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
@@ -105,37 +103,44 @@ const ConversationView = ({ conversationId, socketRef, onConversationActivated }
       });
     } catch (err) {
       console.error('Erreur envoi message :', err);
-      alert(err.response?.data?.error || 'Erreur lors de l\'envoi du message.');
+      alert(err.response?.data?.error || "Erreur lors de l'envoi du message.");
     } finally {
       setSending(false);
     }
   };
 
   if (loading) return <Loader label="Chargement de la discussion..." />;
-  if (error) return <p className="error">{error}</p>;
-  if (!conversation) return <p>Discussion introuvable.</p>;
+  if (error) return <p className="banner">{error}</p>;
+  if (!conversation) return <p className="empty-shop">Discussion introuvable.</p>;
 
   const isPending = conversation.status === 'PENDING';
   const isActive = conversation.status === 'ACTIVE';
   const isExpired = conversation.status === 'EXPIRED';
 
+  const otherName =
+    conversation.initiatorId === conversation.initiator.id
+      ? conversation.target.name
+      : conversation.initiator.name;
+
   return (
     <div className="conv-view">
       <div className="conv-view__header">
-        <h3>
-          {conversation.initiatorId === conversation.initiator.id
-            ? `Discussion avec ${conversation.target.name}`
-            : `Discussion avec ${conversation.initiator.name}`}
-        </h3>
+        <div>
+          <h3>Discussion avec {otherName}</h3>
+          {isPending && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--pending)', marginTop: '2px' }}>
+              En attente de validation par l’administrateur.
+            </p>
+          )}
+          {isExpired && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '2px' }}>
+              Cette discussion a expiré.
+            </p>
+          )}
+        </div>
         <span className={`badge badge--${isPending ? 'pending' : isActive ? 'confirm' : 'neutral'}`}>
-          {isPending ? 'En attente d\'activation' : isActive ? 'Active' : 'Expirée'}
+          {isPending ? 'En attente' : isActive ? 'Active' : 'Expirée'}
         </span>
-        {isPending && (
-          <p style={{ fontSize: '0.8rem', color: 'var(--ink-faint)', marginTop: '4px' }}>
-            En attente de validation par l’administrateur.
-          </p>
-        )}
-        {isExpired && <p style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>Cette discussion a expiré.</p>}
       </div>
 
       <div className="conv-view__messages" ref={scrollRef}>

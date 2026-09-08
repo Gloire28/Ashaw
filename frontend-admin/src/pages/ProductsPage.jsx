@@ -35,7 +35,7 @@ const ProductsPage = () => {
   return (
     <>
       <div className="section-head">
-        <h2>Produits</h2>
+        <h2>Profils</h2>
         <button
           className="btn btn--accent"
           onClick={() => {
@@ -43,12 +43,12 @@ const ProductsPage = () => {
             setFormOpen(true);
           }}
         >
-          + Nouveau produit
+          + Nouveau Profil
         </button>
       </div>
 
       {loading ? (
-        <Loader label="Chargement des produits…" />
+        <Loader label="Chargement des Profils…" />
       ) : (
         <ProductsTable
           products={products}
@@ -74,7 +74,7 @@ const ProductsPage = () => {
 
       {pendingDelete && (
         <ConfirmDialog
-          title="Supprimer ce produit ?"
+          title="Supprimer ce Profil ?"
           message={`« ${pendingDelete.name} » sera définitivement supprimé.`}
           confirmLabel="Supprimer"
           onCancel={() => setPendingDelete(null)}

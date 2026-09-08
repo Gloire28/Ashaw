@@ -6,6 +6,7 @@ import ProductCatalog from '../components/product/ProductCatalog.jsx';
 import ConversationView from '../components/chat/ConversationView.jsx';
 import Loader from '../components/common/Loader.jsx';
 import { useProductSocket } from '../hooks/useProductSocket.js';
+import { formatPrice } from '../utils/formatTime.js';
 
 const ProductDashboard = () => {
   const navigate = useNavigate();
@@ -17,7 +18,6 @@ const ProductDashboard = () => {
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -30,15 +30,22 @@ const ProductDashboard = () => {
 
   const fetchData = useCallback(async () => {
     if (!product) return;
+
     setLoading(true);
+
     try {
       const productRes = await api.get('/api/products/me');
+
       setMyProduct(productRes.data);
+
       await fetchConversations();
+
       setError(null);
     } catch (err) {
       console.error('Erreur chargement dashboard :', err);
-      setError('Impossible de charger les données du tableau de bord.');
+      setError(
+        'Impossible de charger les données du tableau de bord.'
+      );
     } finally {
       setLoading(false);
     }
@@ -49,23 +56,26 @@ const ProductDashboard = () => {
       navigate('/login');
       return;
     }
+
     fetchData();
   }, [product, navigate, fetchData]);
 
-  // Rafraîchir les conversations après activation
   const handleConversationActivated = useCallback(() => {
     fetchConversations();
-    // Recharger la conversation sélectionnée pour mettre à jour le statut
+
     if (selectedConversationId) {
-      api.get(`/api/conversations/${selectedConversationId}`)
-        .then(({ data }) => setSelectedConversationId(data.id))
+      api
+        .get(`/api/conversations/${selectedConversationId}`)
+        .then(({ data }) => {
+          setSelectedConversationId(data.id);
+        })
         .catch(console.error);
     }
   }, [fetchConversations, selectedConversationId]);
 
-  // Écouter les événements socket
   useEffect(() => {
     const socket = socketRef.current;
+
     if (!socket) return;
 
     const handleNewConversation = () => {
@@ -83,133 +93,406 @@ const ProductDashboard = () => {
     return () => {
       socket.off('new_conversation', handleNewConversation);
       socket.off('conversation_updated', handleConversationUpdated);
-      socket.off('conversation_activated', handleConversationActivated);
+      socket.off(
+        'conversation_activated',
+        handleConversationActivated
+      );
     };
-  }, [socketRef, fetchConversations, handleConversationActivated]);
+  }, [
+    socketRef,
+    fetchConversations,
+    handleConversationActivated,
+  ]);
 
-  if (loading) return <Loader label="Chargement du tableau de bord..." />;
-  if (error) return <p className="error">{error}</p>;
-  if (!myProduct) return <p>Aucun produit trouvé.</p>;
+  if (loading) {
+    return <Loader label="Chargement du tableau de bord..." />;
+  }
+
+  if (error) {
+    return (
+      <div
+        className="container"
+        style={{
+          padding: 'var(--space-5) 0',
+        }}
+      >
+        <p className="banner">{error}</p>
+      </div>
+    );
+  }
+
+  if (!myProduct) {
+    return null;
+  }
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Bienvenue, {owner?.username}</h1>
-        <button onClick={logout} className="btn btn--ghost">Se déconnecter</button>
+    <div
+      className="container"
+      style={{
+        paddingTop: 'var(--space-4)',
+        paddingBottom: 'var(--space-6)',
+      }}
+    >
+      {/* =========================
+          HEADER
+      ========================== */}
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 'var(--space-5)',
+          flexWrap: 'wrap',
+          gap: 'var(--space-3)',
+        }}
+      >
+        <div>
+          <h1>Bienvenue, {owner?.username}</h1>
+
+          <p style={{ color: 'var(--ink-soft)' }}>
+            Gérez votre profil et vos discussions en direct.
+          </p>
+        </div>
+
+        <button
+          onClick={logout}
+          className="btn btn--ghost"
+        >
+          Se déconnecter
+        </button>
       </header>
 
-      <section className="dashboard-my-product">
-        <h2>Mon produit</h2>
-        <div className="product-card">
-          <img
-            src={myProduct.mainPhotoUrl}
-            alt={myProduct.name}
-            className="product-card__image"
-            onError={(e) => { e.target.src = '/placeholder-image.png'; }}
-          />
-          <div className="product-card__info">
-            <h3>{myProduct.name}</h3>
-            <p>{myProduct.description}</p>
-            <p>Catégorie : {myProduct.category}</p>
-            <p>Prix / heure : {myProduct.pricePerHour} €</p>
-            <p>Statut : {myProduct.isActive ? '✅ Actif' : '❌ Inactif'}</p>
-            <p>Propriétaire : {myProduct.owner?.username}</p>
-            <p>Âge : {myProduct.owner?.age} ans</p>
-            <p>Quartier : {myProduct.owner?.quartier}</p>
+      {/* =========================
+          SECTION MON PRODUIT
+      ========================== */}
+      <section
+        style={{
+          marginBottom: 'var(--space-6)',
+          background: 'var(--surface)',
+          padding: 'var(--space-4)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--line)',
+        }}
+      >
+        <h2 style={{ marginBottom: 'var(--space-4)' }}>
+          Mon Profil
+        </h2>
 
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(200px, 280px) 1fr',
+            gap: 'var(--space-4)',
+            alignItems: 'start',
+          }}
+        >
+          {/* Image principale */}
+          <div>
+            <img
+              src={myProduct.mainPhotoUrl}
+              alt={myProduct.name}
+              style={{
+                width: '100%',
+                aspectRatio: '4/3',
+                objectFit: 'cover',
+                borderRadius: 'var(--radius-sm)',
+                background: 'var(--surface-sunken)',
+              }}
+              onError={(e) => {
+                e.target.src = '/placeholder-image.png';
+              }}
+            />
+          </div>
+
+          {/* Informations */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-2)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                gap: 'var(--space-2)',
+              }}
+            >
+              <h3 style={{ margin: 0 }}>
+                {myProduct.name}
+              </h3>
+
+              <span
+                className={`badge badge--${
+                  myProduct.isActive
+                    ? 'confirm'
+                    : 'neutral'
+                }`}
+              >
+                {myProduct.isActive
+                  ? 'Actif'
+                  : 'Inactif'}
+              </span>
+            </div>
+
+            <p
+              style={{
+                color: 'var(--ink-soft)',
+                fontSize: '0.95rem',
+              }}
+            >
+              {myProduct.description}
+            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 'var(--space-4)',
+                flexWrap: 'wrap',
+                fontSize: '0.9rem',
+                color: 'var(--ink-soft)',
+                marginTop: 'var(--space-1)',
+              }}
+            >
+              <div>
+                <strong>Catégorie :</strong>{' '}
+                {myProduct.category}
+              </div>
+
+              <div>
+                <strong>Tarif :</strong>{' '}
+                {formatPrice(myProduct.pricePerHour)} FCFA / h
+              </div>
+
+              <div>
+                <strong>Quartier :</strong>{' '}
+                {myProduct.owner?.quartier ||
+                  'Non renseigné'}
+              </div>
+
+              <div>
+                <strong>Âge :</strong>{' '}
+                {myProduct.owner?.age
+                  ? `${myProduct.owner.age} ans`
+                  : 'Non renseigné'}
+              </div>
+            </div>
+
+            {/* Photos supplémentaires */}
             {myProduct.additionalPhotos?.length > 0 && (
-              <div className="additional-photos">
-                <p>Photos supplémentaires :</p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {myProduct.additionalPhotos.map((url, idx) => (
-                    <img
-                      key={idx}
-                      src={url}
-                      alt={`Photo supplémentaire ${idx + 1}`}
-                      style={{ width: '80px', height: '80px', objectFit: 'cover' }}
-                      onError={(e) => { e.target.src = '/placeholder-image.png'; }}
-                    />
-                  ))}
+              <div style={{ marginTop: 'var(--space-2)' }}>
+                <p
+                  style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '500',
+                    marginBottom: 'var(--space-1)',
+                  }}
+                >
+                  Photos supplémentaires :
+                </p>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 'var(--space-2)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  {myProduct.additionalPhotos.map(
+                    (url, idx) => (
+                      <img
+                        key={idx}
+                        src={url}
+                        alt=""
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          objectFit: 'cover',
+                          borderRadius:
+                            'var(--radius-sm)',
+                          background:
+                            'var(--surface-sunken)',
+                        }}
+                      />
+                    )
+                  )}
                 </div>
               </div>
             )}
 
+            {/* Vidéo */}
             {myProduct.videoUrl && (
-              <div className="video">
-                <p>Vidéo :</p>
-                <video src={myProduct.videoUrl} controls style={{ maxWidth: '100%', maxHeight: '300px' }} />
+              <div style={{ marginTop: 'var(--space-2)' }}>
+                <p
+                  style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '500',
+                    marginBottom: 'var(--space-1)',
+                  }}
+                >
+                  Vidéo de présentation :
+                </p>
+
+                <video
+                  src={myProduct.videoUrl}
+                  controls
+                  style={{
+                    maxWidth: '320px',
+                    width: '100%',
+                    borderRadius: 'var(--radius-sm)',
+                  }}
+                />
               </div>
             )}
           </div>
         </div>
-        <button className="btn btn--accent" style={{ marginTop: '16px' }}>
-          ✏️ Modifier mon produit
-        </button>
       </section>
 
-      <section className="dashboard-catalog">
-        <h2>Produits de l'autre catégorie</h2>
-        <ProductCatalog />
-      </section>
+      {/* =========================
+          SECTION DISCUSSIONS
+          VERSION MOBILE OPTIMISÉE
+      ========================== */}
+      <section
+        style={{
+          marginBottom: 'var(--space-6)',
+        }}
+      >
+        <h2>Mes Discussions</h2>
 
-      <section className="dashboard-conversations">
-        <h2>Mes discussions</h2>
         {conversations.length === 0 ? (
-          <p>Aucune discussion pour le moment.</p>
+          <p className="empty-shop">
+            Aucune discussion pour le moment.
+          </p>
         ) : (
-          <div className="dashboard-conversations__layout">
-            <ul className="conversation-list">
-              {conversations.map((conv) => {
-                const isInitiator = conv.initiatorId === myProduct.id;
-                const otherProduct = isInitiator ? conv.target : conv.initiator;
-                const isPending = conv.status === 'PENDING';
-                const isActive = conv.status === 'ACTIVE';
-                const isExpired = conv.status === 'EXPIRED';
+          <div
+            className={`chat-dashboard-container ${
+              selectedConversationId
+                ? 'has-selection'
+                : ''
+            }`}
+          >
+            {/* =========================
+                SIDEBAR CONVERSATIONS
+            ========================== */}
+            <div className="chat-sidebar">
+              <ul className="conversation-list">
+                {conversations.map((conv) => {
+                  const isInitiator =
+                    conv.initiatorId === myProduct.id;
 
-                return (
-                  <li
-                    key={conv.id}
-                    className={`conversation-list__item ${
-                      selectedConversationId === conv.id ? 'active' : ''
-                    }`}
-                    onClick={() => setSelectedConversationId(conv.id)}
-                  >
-                    <div className="conversation-list__info">
-                      <span className="conversation-list__name">
-                        {isInitiator ? 'Vers' : 'Avec'} {otherProduct.name}
-                      </span>
-                      <span className={`badge badge--${isPending ? 'pending' : isActive ? 'confirm' : 'neutral'}`}>
-                        {isPending ? 'En attente' : isActive ? 'Active' : 'Expirée'}
-                      </span>
-                    </div>
-                    <div className="conversation-list__meta">
-                      <span className="conversation-list__last-message">
-                        {conv.messages?.[0]?.content
-                          ? conv.messages[0].content.substring(0, 60) + '...'
-                          : 'Aucun message'}
-                      </span>
-                      <span className="conversation-list__expires">
-                        Expire le : {new Date(conv.expiresAt).toLocaleString()}
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                  const otherProduct = isInitiator
+                    ? conv.target
+                    : conv.initiator;
 
-            <div className="conversation-view-container">
+                  const isPending =
+                    conv.status === 'PENDING';
+
+                  const isActive =
+                    conv.status === 'ACTIVE';
+
+                  return (
+                    <li
+                      key={conv.id}
+                      className={`conversation-list__item ${
+                        selectedConversationId === conv.id
+                          ? 'active'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        setSelectedConversationId(
+                          conv.id
+                        )
+                      }
+                    >
+                      <div className="conversation-list__info">
+                        <span className="conversation-list__name">
+                          {isInitiator
+                            ? 'Vers'
+                            : 'Avec'}{' '}
+                          {otherProduct.name}
+                        </span>
+
+                        <span
+                          className={`badge badge--${
+                            isPending
+                              ? 'pending'
+                              : isActive
+                              ? 'confirm'
+                              : 'neutral'
+                          }`}
+                        >
+                          {isPending
+                            ? 'En attente'
+                            : isActive
+                            ? 'Active'
+                            : 'Expirée'}
+                        </span>
+                      </div>
+
+                      <div className="conversation-list__meta">
+                        <span className="conversation-list__last-message">
+                          {conv.messages?.[0]?.content
+                            ? conv.messages[0].content.substring(
+                                0,
+                                40
+                              ) + '...'
+                            : 'Aucun message'}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            {/* =========================
+                ZONE DE DISCUSSION
+            ========================== */}
+            <div className="chat-main-view">
               {selectedConversationId ? (
-                <ConversationView
-                  conversationId={selectedConversationId}
-                  socketRef={socketRef}
-                  onConversationActivated={handleConversationActivated}
-                />
+                <div className="chat-conversation-wrapper">
+                  {/* Retour mobile */}
+                  <button
+                    className="btn btn--ghost btn--sm chat-back-btn"
+                    onClick={() =>
+                      setSelectedConversationId(null)
+                    }
+                    type="button"
+                  >
+                    ← Retour aux discussions
+                  </button>
+
+                  <ConversationView
+                    conversationId={
+                      selectedConversationId
+                    }
+                    socketRef={socketRef}
+                    onConversationActivated={
+                      handleConversationActivated
+                    }
+                  />
+                </div>
               ) : (
-                <p className="conv-view__empty">Sélectionnez une discussion pour la consulter.</p>
+                <div className="chat-placeholder">
+                  <span>
+                    Sélectionnez une discussion pour
+                    afficher les messages.
+                  </span>
+                </div>
               )}
             </div>
           </div>
         )}
+      </section>
+
+      {/* =========================
+          MATCHS POSSIBLES
+      ========================== */}
+      <section>
+        <h2>Matchs Possibles</h2>
+        <ProductCatalog />
       </section>
     </div>
   );

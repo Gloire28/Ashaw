@@ -2,7 +2,7 @@ import { formatPrice } from '../../utils/formatTime.js';
 
 const ProductsTable = ({ products, onEdit, onToggle, onDelete }) => {
   if (products.length === 0) {
-    return <p className="table__empty">Aucun produit pour le moment. Ajoute le premier.</p>;
+    return <p className="table__empty">Aucun Profil pour le moment. Ajoute le premier.</p>;
   }
 
   return (
@@ -10,7 +10,7 @@ const ProductsTable = ({ products, onEdit, onToggle, onDelete }) => {
       <table className="table">
         <thead>
           <tr>
-            <th>Produit</th>
+            <th>Profil</th>
             <th>Catégorie</th>
             <th>Prix / heure</th>
             <th>Statut</th>

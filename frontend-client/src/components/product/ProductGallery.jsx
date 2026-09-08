@@ -3,7 +3,7 @@ import { useState } from 'react';
 const ProductGallery = ({ product }) => {
   const media = [
     { type: 'image', url: product.mainPhotoUrl },
-    ...product.additionalPhotos.map((url) => ({ type: 'image', url })),
+    ...(product.additionalPhotos || []).map((url) => ({ type: 'image', url })),
     ...(product.videoUrl ? [{ type: 'video', url: product.videoUrl }] : []),
   ];
 

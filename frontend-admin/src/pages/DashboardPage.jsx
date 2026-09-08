@@ -21,7 +21,7 @@ const DashboardPage = () => {
         <div className="stats-row">
           <div className="stat">
             <div className="stat__value">{stats.activeProducts}</div>
-            <div className="stat__label">Produits actifs</div>
+            <div className="stat__label">Profils actifs</div>
           </div>
           <div className="stat">
             <div className="stat__value">{stats.activeConversations}</div>

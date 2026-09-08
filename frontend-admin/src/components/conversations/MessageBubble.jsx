@@ -14,7 +14,7 @@ const MessageBubble = ({ message, adminMode = false }) => {
   let senderLabel = '';
   if (adminMode) {
     if (message.senderType === 'ADMIN') senderLabel = '👤 Admin';
-    else if (message.senderType === 'PRODUCT') senderLabel = '📦 Produit';
+    else if (message.senderType === 'PRODUCT') senderLabel = '📦 Profil';
   }
 
   const isSelf = message.senderType === 'ADMIN'; // En mode admin, les messages de l'admin sont "soi"

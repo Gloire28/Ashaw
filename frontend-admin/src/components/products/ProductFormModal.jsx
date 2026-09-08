@@ -52,7 +52,7 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
       }
       onSuccess();
     } catch (err) {
-      setError(err.response?.data?.message || "Impossible d'enregistrer le produit.");
+      setError(err.response?.data?.message || "Impossible d'enregistrer le Profil.");
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal__head">
-          <h3>{isEdit ? 'Modifier le produit' : 'Nouveau produit'}</h3>
+          <h3>{isEdit ? 'Modifier le Profil' : 'Nouveau Profil'}</h3>
           <button className="modal__close" onClick={onClose} aria-label="Fermer">
             ×
           </button>
@@ -170,7 +170,7 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
               Annuler
             </button>
             <button type="submit" className="btn btn--accent" disabled={loading}>
-              {loading ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Créer le produit'}
+              {loading ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Créer le Profil'}
             </button>
           </div>
         </form>

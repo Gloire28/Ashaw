@@ -11,7 +11,7 @@ const AdminLayout = () => {
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <div className="admin-sidebar__brand">Louez — Admin</div>
+        <div className="admin-sidebar__brand">MatchMaker — Admin</div>
         <nav className="admin-nav">
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
             Tableau de bord
@@ -23,7 +23,7 @@ const AdminLayout = () => {
             Réservations
           </NavLink>
           <NavLink to="/produits" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Produits
+            Profils
           </NavLink>
         </nav>
         <div className="admin-sidebar__footer">

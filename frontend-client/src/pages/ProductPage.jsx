@@ -39,17 +39,17 @@ const ProductPage = () => {
       });
       setShowContactForm(false);
       setMessage('');
-      alert('Votre demande a été envoyée. L\'administrateur va activer la conversation.');
+      alert("Votre demande a été envoyée. L'administrateur va activer la conversation.");
     } catch (err) {
-      setContactError(err.response?.data?.error || 'Erreur lors de l\'envoi.');
+      setContactError(err.response?.data?.error || "Erreur lors de l'envoi.");
     } finally {
       setSending(false);
     }
   };
 
-  if (loading) return <Loader label="Chargement du produit…" />;
+  if (loading) return <Loader label="Chargement du Profil…" />;
   if (error || !product) {
-    return <p className="page-state">Ce produit n'existe pas ou n'est plus disponible.</p>;
+    return <p className="page-state">Ce Profil n'existe pas ou n'est plus disponible.</p>;
   }
 
   const canContact =
@@ -61,71 +61,95 @@ const ProductPage = () => {
 
   return (
     <div className="container product-page">
-      <ProductGallery product={product} />
+      {/* Galerie complète : visible UNIQUEMENT pour les connectés */}
+      {isAuthenticated ? (
+        <ProductGallery product={product} />
+      ) : (
+        // Pour les non-connectés : afficher UNIQUEMENT la photo principale
+        <div className="gallery__main">
+          <img
+            src={product.mainPhotoUrl}
+            alt={product.name}
+            style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }}
+          />
+        </div>
+      )}
 
       <div>
-        <div className="product-info__category">{product.category}</div>
-        <h1>{product.name}</h1>
-        <div className="product-info__price">
-          {formatPrice(product.pricePerHour)} FCFA <span>/ heure</span>
-        </div>
-        <p>{product.description}</p>
+        {/* Nom du produit : visible pour tous */}
+        <h1 style={{ marginBottom: 'var(--space-2)' }}>{product.name}</h1>
 
-        <div className="product-info__actions">
-          {product.isActive ? (
-            canContact ? (
-              <>
-                <button className="btn btn--accent" onClick={() => setShowContactForm(true)}>
-                  💬 Contacter le propriétaire
-                </button>
-                {showContactForm && (
-                  <div className="contact-form" style={{ marginTop: '16px' }}>
-                    <form onSubmit={handleContact}>
-                      <textarea
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Écrivez votre message ici..."
-                        rows="4"
-                        required
-                        style={{ width: '100%', padding: '8px', marginBottom: '8px' }}
-                      />
-                      {contactError && <p className="error">{contactError}</p>}
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button type="submit" className="btn btn--accent" disabled={sending}>
-                          {sending ? 'Envoi...' : 'Envoyer'}
-                        </button>
-                        <button type="button" className="btn btn--ghost" onClick={() => setShowContactForm(false)}>
-                          Annuler
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                )}
-              </>
-            ) : (
-              <p>
-                {!isAuthenticated ? (
+        {isAuthenticated ? (
+          <>
+            {/* Informations complètes pour les connectés */}
+            <div className="product-info__category">Catégorie {product.category}</div>
+            <div className="product-info__price">
+              {formatPrice(product.pricePerHour)} FCFA <span>/ heure</span>
+            </div>
+
+            <div className="product-info__actions" style={{ marginTop: 'var(--space-4)' }}>
+              {product.isActive ? (
+                canContact ? (
                   <>
-                    <Link to="/login" className="btn btn--primary">
-                      Connectez-vous
-                    </Link>{' '}
-                    ou{' '}
-                    <Link to="/register" className="btn btn--primary">
-                      créez votre compte
-                    </Link>{' '}
-                    pour contacter les propriétaires.
+                    {!showContactForm ? (
+                      <button className="btn btn--accent" onClick={() => setShowContactForm(true)}>
+                        💬 Match rapide
+                      </button>
+                    ) : (
+                      <div style={{ background: 'var(--surface)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)' }}>
+                        <form onSubmit={handleContact}>
+                          <div className="field">
+                            <label htmlFor="contact-message">Votre message</label>
+                            <textarea
+                              id="contact-message"
+                              value={message}
+                              onChange={(e) => setMessage(e.target.value)}
+                              placeholder="Écrivez votre message ici..."
+                              rows="4"
+                              required
+                            />
+                          </div>
+                          {contactError && <div className="banner">{contactError}</div>}
+                          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                            <button type="submit" className="btn btn--accent" disabled={sending}>
+                              {sending ? 'Envoi...' : 'Envoyer'}
+                            </button>
+                            <button type="button" className="btn btn--ghost" onClick={() => setShowContactForm(false)}>
+                              Annuler
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
                   </>
                 ) : (
-                  <span>Vous ne pouvez pas contacter ce produit (même catégorie ou votre propre produit).</span>
-                )}
-              </p>
-            )
-          ) : (
-            <p className="product-info__unavailable">
-              Ce produit n'est pas disponible à la location pour le moment.
+                  <p style={{ color: 'var(--ink-faint)', fontSize: '0.9rem' }}>
+                    <span>Vous ne pouvez pas contacter ce Profil (même catégorie ou votre propre Profil).</span>
+                  </p>
+                )
+              ) : (
+                <p className="product-info__unavailable">
+                  Ce Profil n'est pas disponible à la location pour le moment.
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          // Message pour non-connectés : seulement le nom et la photo principale
+          <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--surface-sunken)', borderRadius: 'var(--radius-md)' }}>
+            <p style={{ fontSize: '0.95rem', marginBottom: 'var(--space-2)' }}>
+              🔒 Connectez-vous pour voir le prix et contacter le propriétaire.
             </p>
-          )}
-        </div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <Link to="/login" className="btn btn--accent btn--sm">
+                Se connecter
+              </Link>
+              <Link to="/register" className="btn btn--ghost btn--sm">
+                Créer un compte
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
