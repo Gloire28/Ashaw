@@ -17,7 +17,7 @@ export const config = {
     bucketName: process.env.BACKBLAZE_BUCKET_NAME,
     endpoint: process.env.BACKBLAZE_ENDPOINT,
     region: process.env.BACKBLAZE_REGION,
-    cdnUrl: process.env.CDN_URL,
+    cdnUrl: (process.env.CDN_URL || '').trim(),
   },
   sessionDurationHours: Number(process.env.SESSION_DURATION_HOURS || 5),
   maxActiveConversations: Number(process.env.MAX_ACTIVE_CONVERSATIONS || 3),
