@@ -122,7 +122,7 @@ const ProductRegister = () => {
             </div>
 
             <div className="field">
-              <label htmlFor="reg-description">Description *</label>
+              <label htmlFor="reg-description">Description (Numero de telephone et Taille (M,L,S,XL...) Ajouter une descrition de votre personalité ce sont les informatiosn qui permettent à l'admin de vous mettre en relation) *</label>
               <textarea id="reg-description" name="description" value={form.description} onChange={handleChange} required rows="3" />
             </div>
 

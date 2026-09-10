@@ -25,7 +25,7 @@ export const uploadMedia = async (file, folder = 'booking') => {
 
   await s3Client.send(command);
 
-  const publicUrl = `${endpoint}/${bucketName}/${key}`;
+  const publicUrl = `${config.backblaze.cdnUrl}/${key}`;
 
 
   return publicUrl;
@@ -33,8 +33,8 @@ export const uploadMedia = async (file, folder = 'booking') => {
 
 /**
  * Supprime un fichier de Backblaze
- * @param {string} publicUrl - L'URL publique du fichier (ou le key)
- * @param {string} resourceType - Ignoré ici, gardé pour compatibilité
+ * @param {string} publicUrl 
+ * @param {string} resourceType 
  */
 // Si tu utilises le format S3 (sans /file/)
 export const deleteMedia = async (publicUrl) => {
